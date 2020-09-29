@@ -34,6 +34,7 @@ class Cube:
 		imhead = hdu[0].header
 		pixsize = imhead["cdelt2"] * 3600  # arcsec, assumes square pixels
 		ndim = len(hdu[0].data.shape)  # number of cube dimensions
+		deltach = 0
 
 		# quick fix for a faulty header card that contained \n char - remove the tag altogether
 		if "ORIGIN" in imhead.keys():
@@ -110,7 +111,7 @@ class Cube:
 		self.wc = wc
 		self.image = im
 		self.pixsize = pixsize
-		self.deltac = deltach
+		self.deltach = deltach
 
 
 # def get_filename(self):
