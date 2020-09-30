@@ -66,21 +66,17 @@ def calcrms(arr, fitgauss=False, around_zero=True):
 
 	# iteratively calc rms and remove all values outside 3sigma
 	clip_sigma = 3
-	mu = 0
-
-	n = 0
 	maxiter = 20
+	mu = 0
+	n = 0
 	for i in range(maxiter):
 		# mean of 0 is expected for noise
 		if not around_zero:
 			mu = np.nanmean(a)
-
 		rms = np.sqrt(np.nanmean(a ** 2))
 		w = (a > mu - clip_sigma * rms) & (a < mu + clip_sigma * rms)
-
 		if n == np.sum(w):
 			break
-
 		a = a[w]
 		n = np.sum(w)
 
@@ -106,8 +102,8 @@ def calcrms(arr, fitgauss=False, around_zero=True):
 
 
 # get Gaussian beam volume in sr
-def beam_volume(bmaj, bmin=None):
-	# bmaj and bmin are major and minor FWHM of Gaussian (synthesised) beam, in arcsec
+def beam_volume_sr(bmaj, bmin=None):
+	# bmaj and bmin are major and minor FWHMs of a Gaussian (synthesised) beam, in arcsec
 	if bmin is None:
 		bmin = bmaj
 
@@ -122,7 +118,7 @@ def surf_temp(freq, sigma, theta):
 	# sigma = rms noise in Jy/beam
 	# theta = resolution FWHM in arcsec
 
-	temp = sigma*1e-26/beam_volume(theta) * const.c**2 / (2*const.k * (freq*1e9)**2)
+	temp = sigma * 1e-26 / beam_volume_sr(theta) * const.c ** 2 / (2 * const.k * (freq * 1e9) ** 2)
 
 	return temp
 
