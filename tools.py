@@ -60,20 +60,24 @@ def ghz2kms(width_ghz, freq_ghz):
 
 
 # Calculate rms in the map (diregarding outlier pixels)
-def calcrms(arr, fitgauss=False, around_zero=True):
+def calcrms(arr, fitgauss=False, around_zero=True, clip_sigma=3, maxiter=20):
 	a = arr[np.isfinite(arr)].flatten()
 	rms = 0
 
 	# iteratively calc rms and remove all values outside 3sigma
-	clip_sigma = 3
-	maxiter = 20
 	mu = 0
 	n = 0
 	for i in range(maxiter):
 		# mean of 0 is expected for noise
 		if not around_zero:
 			mu = np.nanmean(a)
-		rms = np.sqrt(np.nanmean(a ** 2))
+
+		if len(a) > 0:
+			rms = np.sqrt(np.mean(a ** 2))
+		else:
+			# rms = 0
+			break
+
 		w = (a > mu - clip_sigma * rms) & (a < mu + clip_sigma * rms)
 		if n == np.sum(w):
 			break

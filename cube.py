@@ -3,7 +3,7 @@ import numpy as np
 from astropy.io import fits
 from astropy.table import Table
 from astropy import wcs
-import astropy.units as u
+# import astropy.units as u
 import interferopy.tools as tools
 import scipy.constants as const
 
@@ -28,7 +28,8 @@ class Cube:
 			self.reffreq = None
 			self.deltafreq = None
 			self.__rms = None
-			self.__load_fitsfile()  # Computes most of above values
+			# Computes most of above values
+			self.__load_fitsfile()
 		else:
 			raise FileNotFoundError
 
@@ -45,16 +46,23 @@ class Cube:
 		if "ORIGIN" in self.head.keys():
 			self.head.remove('ORIGIN')
 
-		# transpose the cube data so that intuitive im[ra,dec,freq] indexing can be used
-		# drop the fourth (Stokes) axis if only a single plane is present
-		naxis = len(self.hdu[0].data.shape)  # number of cube dimensions
+		# transpose the cube data so that intuitive im[ra,dec,freq,stokes] indexing can be used
+		# number of cube dimensions
+		naxis = len(self.hdu[0].data.shape)
 		if naxis == 4 and self.hdu[0].data.shape[0] == 1:
+			# drop the fourth (Stokes) axis if only a single plane is present
 			image = self.hdu[0].data.T[:, :, :, 0]
 			naxis = 3
-		elif 2 <= naxis <= 4:
+		elif naxis == 4:
 			image = self.hdu[0].data.T
-			if naxis == 4 and self.hdu[0].data.shape[0] > 1:
-				self.log("Warning: did not experiment with full polarization cubes.")
+			self.log("Warning: did test full polarization cubes with multiple Stokes axes.")
+		elif naxis == 3:
+			image = self.hdu[0].data.T
+		elif naxis == 2:
+			# add the third axis if missing because several methods require it
+			image = self.hdu[0].data[np.newaxis, :, :].T
+			naxis = 3
+			self.log("Warning: did not test 2D maps with the missing 3rd axis.")
 		else:
 			raise Exception("Invalid number of cube dimensions.")
 		self.im = image
@@ -81,6 +89,9 @@ class Cube:
 					reffreq = self.head["RESTFREQ"] * 1e-9
 				elif "RESTFRQ" in self.head.keys():
 					reffreq = self.head["RESTFRQ"] * 1e-9
+				else:
+					# unknown
+					reffreq = 0
 				freqs = reffreq * (1 - vels / const.c)  # in GHz
 				self.reffreq = reffreq
 
@@ -107,7 +118,11 @@ class Cube:
 			beam_table = self.hdu[1].data  # this is inserted by CASA, there is unit metadata, but should be arcsec
 		# otherwise clone the single beam across all channels in a new table
 		else:
-			nch = self.im.shape[2]
+			if len(self.im.shape) >= 3:
+				nch = self.im.shape[2]
+			else:
+				nch = 1
+
 			beam_table = Table()
 			beam_table.add_columns([Table.Column(name='bmaj', data=np.ones(nch) * beam["bmaj"])])
 			beam_table.add_columns([Table.Column(name='bmin', data=np.ones(nch) * beam["bmin"])])
@@ -118,14 +133,15 @@ class Cube:
 
 		# model image is Jy/pixel, and since beam volume divides integrated fluxes, set it to 1 in this case
 		if "BUNIT" in self.head.keys() and self.head["BUNIT"].strip().lower().endswith("/pixel"):
-			self.beamvol = 1
-		else:
+			self.beamvol = np.array([1] * nch)
+		elif "BUNIT" in self.head.keys() and self.head["BUNIT"].strip().lower().endswith("/beam"):
 			self.beamvol = np.pi / (4 * np.log(2)) * self.beam["bmaj"] * self.beam["bmin"] / self.pixsize ** 2
 			if type(self.beamvol) is Table.Column:
 				self.beamvol = self.beamvol.data
-			if nch == 1:
-				self.beamvol = self.beamvol[0]
-
+		else:
+			# some non implemented scenario
+			# beamvol divides aperture fluxes, so better to have it at 1 than 0 if unknown
+			self.beamvol = np.array([1] * nch)
 
 	def log(self, text):
 		"""
@@ -149,7 +165,7 @@ class Cube:
 					self.__rms[i] = tools.calcrms(self.im[:, :, i])
 			else:
 				self.log("Computing rms.")
-				self.__rms = tools.calcrms(self.im)
+				self.__rms = np.array([tools.calcrms(self.im)])
 		return self.__rms
 
 	def set_rms(self, value):
@@ -159,10 +175,11 @@ class Cube:
 
 	def deltavel(self, reffreq=None):
 		"""
-		Computes channel width in velocity units (km/s).
-		:param reffreq: Computed around specific velocity. If empty, will use referent one from the header.
+		Compute channel width in velocity units (km/s).
+		:param reffreq: Computed around specific velocity. If empty, use referent one from the header.
 		:return: Channel width in km/s. Sign reflects how channels are ordered.
 		"""
+
 		if reffreq is None:
 			reffreq = self.reffreq
 
@@ -171,24 +188,22 @@ class Cube:
 	def vels(self, reffreq):
 		"""
 		Compute velocities of all cube channels for a given reference frequency.
-		:param reffreq: Reference frequency in GHz.
+		:param reffreq: Reference frequency in GHz. If empty, use referent one from the header.
 		:return: Velocities in km/s.
 		"""
+
+		if reffreq is None:
+			reffreq = self.reffreq
+
 		return const.c / 1000 * (1 - self.freqs / reffreq)
 
-	def spectrum(self, ra=None, dec=None, radius=0, channel=None):
+	def radec2pix(self, ra=None, dec=None):
 		"""
-		Extract the spectrum (for 3D cube) or a single flux density value (for 2D map) at a given coord (ra, dec)
-		integrated within a circular aperture of a given radius.
-		If no coordinates are given, the central pixel is assumed.
-		If no radius is given, a single pixel value is extracted (usual units Jy/beam), otherwise aperture
-		integrated spectrum is extracted (units of Jy).
-		Note: use the freqs field (or velocities method) to get the x-axis values.
+		Convert ra and dec coordinates into pixels to be used as im[px, py].
+		If no coords are given, the center of the map is assumed.
 		:param ra: Right Ascention in degrees.
 		:param dec: Declination in degrees.
-		:param radius: Circular aperture radius in arcsec.
-		:param channel: Force extracton in a single channel of provided index (instead of the full cube).
-		:return: Spectrum as 1D array. Alternatively,  a single value if 2D map was loded, or single channel chosen.
+		:return: Coords x and y in pixels (0 based index).
 		"""
 
 		# use the central pixel if no coords given
@@ -202,20 +217,72 @@ class Cube:
 			else:
 				px, py, _ = self.wc.all_world2pix(ra, dec, self.freqs[0], 0)
 
+		# need integer indices
 		px = int(np.round(px))
 		py = int(np.round(py))
 
+		return px, py
+
+	def freq2pix(self, freq):
+		"""
+		Get the channel number of requested frequency
+		:param freq: Frequency in GHz.
+		:return: Channel index.
+		"""
+
+		if len(self.wc.axis_type_names) < 3:
+			return 0
+
+		ra0 = self.head["CRVAL1"]
+		dec0 = self.head["CRVAL2"]
+		_, _, pz = self.wc.all_world2pix(ra0, dec0, freq * 1e9, 0)
+
+		# need integer index
+		pz = int(np.round(pz))
+
+		return pz
+
+	def distance_grid(self, px, py):
+		"""
+		Grid of distances from the chosen pixel. Uses small angle approximation (simple Pythagorean distances).
+		:param px: Index of x coord.
+		:param py: Index of y coord.
+		:return: 2D grid of distances in pixels, same shape as the cube slice
+		"""
+
+		xxx = np.arange(self.im.shape[0])
+		yyy = np.arange(self.im.shape[1])
+		distances = np.sqrt((yyy[np.newaxis, :] - py) ** 2 + (xxx[:, np.newaxis] - px) ** 2)
+		return distances
+
+	def spectrum(self, ra=None, dec=None, radius=0, channel=None):
+		"""
+		Extract the spectrum (for 3D cube) or a single flux density value (for 2D map) at a given coord (ra, dec)
+		integrated within a circular aperture of a given radius.
+		If no coordinates are given, the center of the map is assumed.
+		If no radius is given, a single pixel value is extracted (usual units Jy/beam), otherwise aperture
+		integrated spectrum is extracted (units of Jy).
+		Note: use the freqs field (or velocities method) to get the x-axis values.
+		:param ra: Right Ascention in degrees.
+		:param dec: Declination in degrees.
+		:param radius: Circular aperture radius in arcsec.
+		:param channel: Force extracton in a single channel of provided index (instead of the full cube).
+		:return: Spectrum as 1D array. Alternatively,  a single value if 2D map was loded, or single channel chosen.
+		"""
+
+		px, py = self.radec2pix(ra, dec)
+
 		# take single pixel value if no aperture radius given
 		if radius <= 0:
+			self.log("Extracting single pixel spectrum.")
 			spec = self.im[px, py, :]
 			# use just a single channel
 			if channel is not None:
 				spec = spec[channel]
 		else:
-			# grid of distances from the source, need for the aperture mask
-			xxx = np.arange(self.im.shape[0])
-			yyy = np.arange(self.im.shape[1])
-			distances = np.sqrt((yyy[np.newaxis, :] - py) ** 2 + (xxx[:, np.newaxis] - px) ** 2) * self.pixsize
+			self.log("Extracting aperture spectrum.")
+			# grid of distances from the source in arcsec, need for the aperture mask
+			distances = self.distance_grid(px, py) * self.pixsize
 
 			# select pixels within the aperture
 			w = distances <= radius
@@ -227,23 +294,97 @@ class Cube:
 				for i in range(self.nch):
 					spec[i] = np.nansum(self.im[:, :, i][w]) / self.beamvol[i]
 
-		if len(spec == 1):
+		if len(spec) == 1:
 			spec = spec[0]
 
 		return spec
 
-	def growth_curve(self, ra=None, dec=None, maxradius=0, channel=0):
-		# single channel curve of growth, up to max radius
-		# add profile capability or put into separate function
+	def aperflux(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None):
+		"""
+		Alias function of growing_aperture using the cumulative aperture mode.
+		"""
+		return self.growing_aperture(ra=ra, dec=dec, maxradius=maxradius, binspacing=binspacing,
+									 bins=bins, channel=channel, freq=freq, profile=False)
 
-		# TODO
+	def profile(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None):
+		"""
+		Alias function of growing_aperture using the profile mode.
+		"""
+		return self.growing_aperture(ra=ra, dec=dec, maxradius=maxradius, binspacing=binspacing,
+									 bins=bins, channel=channel, freq=freq, profile=True)
 
-		return None
+	def growing_aperture(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None,
+						 profile=False):
+		"""
+		Compute curve of growth at given coordinate position, in a circular aperture growing up to max radius.
+		If no coordinates are given, the center of the map is assumed.
+		:param ra: Right ascention in degrees.
+		:param dec: Declination in degrees.
+		:param maxradius: Max radius for aperture integration in arcsec.
+		:param binspacing: Resolution of the growth flux curve in arcsec, default is one pixel size.
+		:param bins: Custom bins for curve growth (1D np array).
+		:param channel: Index of the cube channel to take.
+		:param freq: Frequency in GHz, takes precedence over channel param.
+		:param profile: If True, compute azimuthally averaged profile, if False, compute cumulative aperture values
+		:return: radius, flux, err, npix - all 1D numpy arrays: aperture radius, cumulative flux within it,
+		associated Poissionain error (based on number of beams inside the aprture and the map rms), number of pixels
+		"""
+		self.log("Running growth_curve.")
 
+		px, py = self.radec2pix(ra, dec)
+		distances = self.distance_grid(px, py) * self.pixsize
+
+		if freq is not None:
+			channel = self.freq2pix(freq)
+
+		if bins is None:
+			if binspacing is None:
+				# take one pixel size as default size
+				binspacing = self.pixsize
+			bins = np.arange(0, maxradius, binspacing)
+
+		# histogram will fail if nans are present, select only valid pixels
+		w = np.isfinite(self.im[:, :, channel])
+
+		# histogram by default sums the number of pixels
+		npix = np.histogram(distances[w], bins=bins)[0]
+		if profile:
+			pass
+		else:
+			npix = np.cumsum(npix)
+
+		# pixel values are added as histogram weights to get the sum of pixel values
+		flux = np.histogram(distances[w], bins=bins, weights=self.im[:, :, channel][w])[0]
+		if profile:
+			# mean value - azimuthally averaged
+			flux = flux / npix
+		else:
+			# cumulative inside aperture
+			flux = np.cumsum(flux) / self.beamvol[channel]
+
+		if profile:
+			# error on the mean
+			err = self.rms[channel]/np.sqrt(npix/self.beamvol)
+		else:
+			# error estimate assuming Poissonian statistics: rms x sqrt(number of independent beams inside aperture)
+			err = self.rms[channel] * np.sqrt(npix / self.beamvol[channel])
+
+		# centers of bins
+		radius = 0.5 * (bins[1:] + bins[:-1])
+
+		# old loop version, human readable, but super slow in execution for large apertures and lots of pixels
+		# for i in range(len(bins)-1):
+		# 	#w=(distances>=bins[i]) & (distances<bins[i+1]) #annulus
+		# 	w=(distances>=0) & (distances<bins[i+1]) # aperture (cumulative)
+		# 	npix[i]=np.sum(w)
+		# 	flux[i]=np.sum(im[w])/beamvol
+		# 	err[i]=rms*np.sqrt(npix[i]/beamvol) # rms times sqrt of beams used for integration
+
+		return radius, flux, err, npix
 
 class MultiCube:
 	def __init__(self):
 		raise NotImplementedError
 
-	# need image, residual, dirty for residual scaling - beamvol must be overriden in this case
-	# add model and psf specific things?
+# need image, residual, dirty for residual scaling - beamvol must be overriden in this case
+# add model and psf specific things?
