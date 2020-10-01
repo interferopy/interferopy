@@ -28,14 +28,14 @@ class Cube:
 			self.reffreq = None
 			self.deltafreq = None
 			self.__rms = None
-			# Computes most of above values
+			# Computes above values, except rms, which is computed on demand.
 			self.__load_fitsfile()
 		else:
-			raise FileNotFoundError
+			raise FileNotFoundError(filename)
 
 	def __load_fitsfile(self):
 		"""
-		Read the fits file and extract common useful data into Cube class atributtes.
+		Read the fits file and extract common useful data into Cube class attributes.
 		"""
 		self.log("Opening " + self.filename)
 		self.hdu = fits.open(self.filename)
@@ -55,16 +55,16 @@ class Cube:
 			naxis = 3
 		elif naxis == 4:
 			image = self.hdu[0].data.T
-			self.log("Warning: did test full polarization cubes with multiple Stokes axes.")
+			self.log("Warning: did test 4D full polarization cubes with multiple Stokes axes.")
 		elif naxis == 3:
 			image = self.hdu[0].data.T
 		elif naxis == 2:
-			# add the third axis if missing because several methods require it
+			# add the third axis, if missing, because several methods require it
 			image = self.hdu[0].data[np.newaxis, :, :].T
 			naxis = 3
 			self.log("Warning: did not test 2D maps with the missing 3rd axis.")
 		else:
-			raise Exception("Invalid number of cube dimensions.")
+			raise RuntimeError("Invalid number of cube dimensions.")
 		self.im = image
 		self.naxis = naxis
 
@@ -134,14 +134,12 @@ class Cube:
 		# model image is Jy/pixel, and since beam volume divides integrated fluxes, set it to 1 in this case
 		if "BUNIT" in self.head.keys() and self.head["BUNIT"].strip().lower().endswith("/pixel"):
 			self.beamvol = np.array([1] * nch)
-		elif "BUNIT" in self.head.keys() and self.head["BUNIT"].strip().lower().endswith("/beam"):
+		else:
+			# "BUNIT" in self.head.keys() and self.head["BUNIT"].strip().lower().endswith("/beam"):
+			# sometimes BUNIT is not given, although beam is in the header (e.g. the PSF map)
 			self.beamvol = np.pi / (4 * np.log(2)) * self.beam["bmaj"] * self.beam["bmin"] / self.pixsize ** 2
 			if type(self.beamvol) is Table.Column:
 				self.beamvol = self.beamvol.data
-		else:
-			# some non implemented scenario
-			# beamvol divides aperture fluxes, so better to have it at 1 than 0 if unknown
-			self.beamvol = np.array([1] * nch)
 
 	def log(self, text):
 		"""
@@ -231,20 +229,29 @@ class Cube:
 		"""
 
 		if len(self.wc.axis_type_names) < 3:
-			return 0
+			self.log("Warning: No frequency axis is present.")
+			return None
 
-		ra0 = self.head["CRVAL1"]
-		dec0 = self.head["CRVAL2"]
-		_, _, pz = self.wc.all_world2pix(ra0, dec0, freq * 1e9, 0)
+		if freq < np.min(self.freqs) or freq > np.max(self.freqs):
+			self.log("Warning: Requested frequency is outside of the available range.")
+			return None
 
-		# need integer index
-		pz = int(np.round(pz))
+		# This is ok, unless the axis is in velocities
+		# ra0 = self.head["CRVAL1"]
+		# dec0 = self.head["CRVAL2"]
+		# _, _, pz = self.wc.all_world2pix(ra0, dec0, freq * 1e9, 0)
+		# pz = int(np.round(pz))  # need integer index
+
+		# freqs is populated when the cube is loaded, regardless whether the header is in vels or freqs
+		# find the index with the minimum offset
+		pz = np.argmin(np.abs(self.freqs-freq))
 
 		return pz
 
 	def distance_grid(self, px, py):
 		"""
 		Grid of distances from the chosen pixel. Uses small angle approximation (simple Pythagorean distances).
+		Distances are measured in numbers of pixels.
 		:param px: Index of x coord.
 		:param py: Index of y coord.
 		:return: 2D grid of distances in pixels, same shape as the cube slice
@@ -316,7 +323,7 @@ class Cube:
 	def growing_aperture(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None,
 						 profile=False):
 		"""
-		Compute curve of growth at given coordinate position, in a circular aperture growing up to max radius.
+		Compute curve of growth at the given coordinate position in a circular aperture, growing up to the max radius.
 		If no coordinates are given, the center of the map is assumed.
 		:param ra: Right ascention in degrees.
 		:param dec: Declination in degrees.
@@ -359,7 +366,7 @@ class Cube:
 			# mean value - azimuthally averaged
 			flux = flux / npix
 		else:
-			# cumulative inside aperture
+			# cumulative flux inside an aperture is the sum of all pixel values divided by the beam volume
 			flux = np.cumsum(flux) / self.beamvol[channel]
 
 		if profile:
@@ -382,9 +389,32 @@ class Cube:
 
 		return radius, flux, err, npix
 
+	def save_fitsfile(self, filename=None, overwrite=False):
+		"""
+		Save the cube in a fits file by storing the image and the header.
+		:param filename: Path string to the output file. Uses input filename by default
+		:param overwrite: False by default.
+		:return:
+		"""
+
+		if not overwrite and filename is None:
+			raise RuntimeError("Overwriting is disabled and no filename was provided.")
+
+		# use the input filename if none is provided
+		if overwrite and filename is None:
+			filename = self.filename
+
+		if os.path.exists(filename) and not overwrite:
+			raise RuntimeError("Filename exist, but overwriting is disabled.")
+
+		fits.writeto(filename, self.im.T, self.head, overwrite=overwrite)
+		self.log("Fits file saved to " + filename)
+
+
 class MultiCube:
 	def __init__(self):
+
 		raise NotImplementedError
 
-# need image, residual, dirty for residual scaling - beamvol must be overriden in this case
-# add model and psf specific things?
+	# need image, residual, dirty for residual scaling - beamvol must be overriden in this case
+	# add model and psf specific things?
