@@ -11,6 +11,7 @@ import scipy.constants as const
 class Cube:
 	# TODO: comment class attributes
 	# TODO: try opening all maps: dirty, clean, model, psf
+	# TODO: time calcrms on aspecs using .T and without .T
 
 	def __init__(self, filename):
 		if os.path.exists(filename):
@@ -114,8 +115,17 @@ class Cube:
 			beam_table.add_columns([Table.Column(name='chan', data=range(nch))])
 			beam_table.add_columns([Table.Column(name='pol', data=np.zeros(nch))])
 		self.beam = beam_table
-		# TODO: for psf map beamvolume should be 1
-		self.beamvol = np.pi / (4 * np.log(2)) * self.beam["bmaj"] * self.beam["bmin"] / self.pixsize ** 2
+
+		# model image is Jy/pixel, and since beam volume divides integrated fluxes, set it to 1 in this case
+		if "BUNIT" in self.head.keys() and self.head["BUNIT"].strip().lower().endswith("/pixel"):
+			self.beamvol = 1
+		else:
+			self.beamvol = np.pi / (4 * np.log(2)) * self.beam["bmaj"] * self.beam["bmin"] / self.pixsize ** 2
+			if type(self.beamvol) is Table.Column:
+				self.beamvol = self.beamvol.data
+			if nch == 1:
+				self.beamvol = self.beamvol[0]
+
 
 	def log(self, text):
 		"""
@@ -168,10 +178,10 @@ class Cube:
 
 	def spectrum(self, ra=None, dec=None, radius=0, channel=None):
 		"""
-		Extract the spectrum (for 3D cube) or single flux density value (for 2D map) at a given (ra, dec)
+		Extract the spectrum (for 3D cube) or a single flux density value (for 2D map) at a given coord (ra, dec)
 		integrated within a circular aperture of a given radius.
 		If no coordinates are given, the central pixel is assumed.
-		If no radius is given, single pixel value is extracted (usual units Jy/beam), otherwise aperture
+		If no radius is given, a single pixel value is extracted (usual units Jy/beam), otherwise aperture
 		integrated spectrum is extracted (units of Jy).
 		Note: use the freqs field (or velocities method) to get the x-axis values.
 		:param ra: Right Ascention in degrees.
@@ -195,7 +205,7 @@ class Cube:
 		px = int(np.round(px))
 		py = int(np.round(py))
 
-		# use single pixel value if no aperture radius given
+		# take single pixel value if no aperture radius given
 		if radius <= 0:
 			spec = self.im[px, py, :]
 			# use just a single channel
@@ -217,6 +227,9 @@ class Cube:
 				for i in range(self.nch):
 					spec[i] = np.nansum(self.im[:, :, i][w]) / self.beamvol[i]
 
+		if len(spec == 1):
+			spec = spec[0]
+
 		return spec
 
 	def growth_curve(self, ra=None, dec=None, maxradius=0, channel=0):
@@ -231,3 +244,6 @@ class Cube:
 class MultiCube:
 	def __init__(self):
 		raise NotImplementedError
+
+	# need image, residual, dirty for residual scaling - beamvol must be overriden in this case
+	# add model and psf specific things?
