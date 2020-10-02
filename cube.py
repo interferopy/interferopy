@@ -312,24 +312,6 @@ class Cube:
 		distances = np.sqrt((yyy[np.newaxis, :] - py) ** 2 + (xxx[:, np.newaxis] - px) ** 2)
 		return distances
 
-	def single_pixel_value(self, ra=None, dec=None, freq=None, channel=None):
-		"""
-		Get a single pixel value at the given coord.
-		If freq is undefined, will return the spectrum of the 3D cube.
-		Units: ra[deg], dec[deg], freq[GHz]
-		Wrapper function. Check the "spectrum" method for details.
-		"""
-		return self.spectrum(ra=ra, dec=dec, radius=0, freq=freq, channel=channel)
-
-	def aperture_value(self, ra=None, dec=None, radius=1, freq=None, channel=None):
-		"""
-		Get an aperture integrated value at the given coord.
-		If freq is undefined, will return the spectrum of the 3D cube.
-		Units: ra[deg], dec[deg], radius[arcsec], freq[GHz]
-		Wrapper function. Check the "spectrum" method for details.
-		"""
-		return self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=None)
-
 	def spectrum(self, ra=None, dec=None, radius=0, channel=None, freq=None):
 		"""
 		Extract the spectrum (for 3D cube) or a single flux density value (for 2D map) at a given coord (ra, dec)
@@ -377,26 +359,23 @@ class Cube:
 
 		return spec
 
-	def aperture_r(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None):
+	def single_pixel_value(self, ra=None, dec=None, freq=None, channel=None):
 		"""
-		Obtain integrated flux within a circular aperture as a function of radius.
+		Get a single pixel value at the given coord.
 		If freq is undefined, will return the spectrum of the 3D cube.
-		Wrapper function. Check the "growing_aperture" method for details.
-		Units: ra[deg], dec[deg], maxradius[arcsec], binspacing[arcsec], freq[GHz]
-		:return: radius, flux, err, npix
+		Units: ra[deg], dec[deg], freq[GHz]
+		Alias function. Check the "spectrum" method for details. The radius is fixed to 0 here.
 		"""
-		return self.growing_aperture(ra=ra, dec=dec, maxradius=maxradius, binspacing=binspacing,
-									 bins=bins, channel=channel, freq=freq, profile=False)
+		return self.spectrum(ra=ra, dec=dec, radius=0, freq=freq, channel=channel)
 
-	def profile_r(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None):
+	def aperture_value(self, ra=None, dec=None, radius=1, freq=None, channel=None):
 		"""
-		Obtain azimuthaly averaged profile as a function of radius.
-		Wrapper function. Check the "growing_aperture" method for details.
-		Units: ra[deg], dec[deg], maxradius[arcsec], binspacing[arcsec], freq[GHz]
-		:return: radius, flux, err, npix
+		Get an aperture integrated value at the given coord.
+		If freq is undefined, will return the spectrum of the 3D cube.
+		Units: ra[deg], dec[deg], radius[arcsec], freq[GHz]
+		Alias function. Check the "spectrum" method for details. The radius is defaulted to 1 arcsec here.
 		"""
-		return self.growing_aperture(ra=ra, dec=dec, maxradius=maxradius, binspacing=binspacing,
-									 bins=bins, channel=channel, freq=freq, profile=True)
+		return self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=channel)
 
 	def growing_aperture(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None,
 						 profile=False):
@@ -469,6 +448,27 @@ class Cube:
 		# 	err[i]=rms*np.sqrt(npix[i]/beamvol) # rms times sqrt of beams used for integration
 
 		return radius, flux, err, npix
+
+	def aperture_r(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None):
+		"""
+		Obtain integrated flux within a circular aperture as a function of radius.
+		If freq is undefined, will return the spectrum of the 3D cube.
+		Alias function. Check the "growing_aperture" method for details.
+		Units: ra[deg], dec[deg], maxradius[arcsec], binspacing[arcsec], freq[GHz]
+		:return: radius, flux, err, npix
+		"""
+		return self.growing_aperture(ra=ra, dec=dec, maxradius=maxradius, binspacing=binspacing,
+									 bins=bins, channel=channel, freq=freq, profile=False)
+
+	def profile_r(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None):
+		"""
+		Obtain azimuthaly averaged profile as a function of radius.
+		Alias function. Check the "growing_aperture" method for details.
+		Units: ra[deg], dec[deg], maxradius[arcsec], binspacing[arcsec], freq[GHz]
+		:return: radius, flux, err, npix
+		"""
+		return self.growing_aperture(ra=ra, dec=dec, maxradius=maxradius, binspacing=binspacing,
+									 bins=bins, channel=channel, freq=freq, profile=True)
 
 	def save_fitsfile(self, filename=None, overwrite=False):
 		"""

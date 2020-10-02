@@ -59,7 +59,7 @@ def ghz2kms(width_ghz, freq_ghz):
 	return width_ghz / freq_ghz * (const.c/1000)  # widthkms
 
 
-# Calculate rms in the map (diregarding outlier pixels)
+# Calculate rms in the map (disregarding outlier pixels)
 def calcrms(arr, fitgauss=False, around_zero=True, clip_sigma=3, maxiter=20):
 	a = arr[np.isfinite(arr)].flatten()
 	rms = 0
