@@ -14,6 +14,10 @@ class Cube:
 	# TODO: time calcrms on aspecs using .T and without .T
 
 	def __init__(self, filename):
+		"""
+		Create a cube object by reading the fits image.
+		:param filename: Path string to the fits image.
+		"""
 		if os.path.exists(filename):
 			self.filename = filename
 			self.hdu = None
@@ -28,7 +32,7 @@ class Cube:
 			self.reffreq = None
 			self.deltafreq = None
 			self.__rms = None
-			# Computes above values, except rms, which is computed on demand.
+			# Compute above values, except rms, which is computed on demand.
 			self.__load_fitsfile()
 		else:
 			raise FileNotFoundError(filename)
@@ -221,22 +225,46 @@ class Cube:
 
 		return px, py
 
-	def freq2pix(self, freq):
+	def pix2radec(self, px=None, py=None):
 		"""
-		Get the channel number of requested frequency
+		Convert pixels coordinates into ra and dec.
+		If no coords are given, the center of the map is assumed.
+		:param px: X-axis index.
+		:param py: Y-axis index.
+		:return: Coords ra, dec in degrees
+		"""
+		if px is None or py is None:
+			px = self.im.shape[0] / 2
+			py = self.im.shape[1] / 2
+
+		if len(self.wc.axis_type_names) < 3:
+			ra, dec = self.wc.all_pix2world(px, py)
+		else:
+			ra, dec, _ = self.wc.all_pix2world(px, py, self.freqs[0], 0)
+
+		return ra, dec
+
+	def freq2pix(self, freq=None):
+		"""
+		Get the channel number of requested frequency.
 		:param freq: Frequency in GHz.
 		:return: Channel index.
 		"""
 
 		if len(self.wc.axis_type_names) < 3:
-			self.log("Warning: No frequency axis is present.")
+			raise ValueError("No frequency axis is present.")
 			return None
+
+		if freq is None:
+			pz = self.im.shape[2] / 2
+			pz = int(round(pz))
+			return pz
 
 		if freq < np.min(self.freqs) or freq > np.max(self.freqs):
-			self.log("Warning: Requested frequency is outside of the available range.")
+			raise ValueError("Requested frequency is outside of the available range.")
 			return None
 
-		# This is ok, unless the axis is in velocities
+		# This is ok, unless the 3rd axis is in velocities
 		# ra0 = self.head["CRVAL1"]
 		# dec0 = self.head["CRVAL2"]
 		# _, _, pz = self.wc.all_world2pix(ra0, dec0, freq * 1e9, 0)
@@ -244,9 +272,31 @@ class Cube:
 
 		# freqs is populated when the cube is loaded, regardless whether the header is in vels or freqs
 		# find the index with the minimum offset
-		pz = np.argmin(np.abs(self.freqs-freq))
+		pz = np.argmin(np.abs(self.freqs - freq))
 
 		return pz
+
+	def pix2freq(self, pz=None):
+		"""
+		Get the frequency of a given channel.
+		If no channel is given, the center channel is assumed.
+		:param pz: Channel index.
+		:return: Frequency in GHz.
+		"""
+
+		if len(self.wc.axis_type_names) < 3:
+			raise ValueError("No frequency axis is present.")
+			return None
+
+		if pz is None:
+			pz = self.im.shape[2] / 2
+			pz = int(round(pz))
+
+		if pz < 0 or pz >= len(self.freqs):
+			raise ValueError("Requested channel is outside of the available range.")
+			return None
+
+		return self.freqs[pz]
 
 	def distance_grid(self, px, py):
 		"""
@@ -262,7 +312,25 @@ class Cube:
 		distances = np.sqrt((yyy[np.newaxis, :] - py) ** 2 + (xxx[:, np.newaxis] - px) ** 2)
 		return distances
 
-	def spectrum(self, ra=None, dec=None, radius=0, channel=None):
+	def single_pixel_value(self, ra=None, dec=None, freq=None, channel=None):
+		"""
+		Get a single pixel value at the given coord.
+		If freq is undefined, will return the spectrum of the 3D cube.
+		Units: ra[deg], dec[deg], freq[GHz]
+		Wrapper function. Check the "spectrum" method for details.
+		"""
+		return self.spectrum(ra=ra, dec=dec, radius=0, freq=freq, channel=channel)
+
+	def aperture_value(self, ra=None, dec=None, radius=1, freq=None, channel=None):
+		"""
+		Get an aperture integrated value at the given coord.
+		If freq is undefined, will return the spectrum of the 3D cube.
+		Units: ra[deg], dec[deg], radius[arcsec], freq[GHz]
+		Wrapper function. Check the "spectrum" method for details.
+		"""
+		return self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=None)
+
+	def spectrum(self, ra=None, dec=None, radius=0, channel=None, freq=None):
 		"""
 		Extract the spectrum (for 3D cube) or a single flux density value (for 2D map) at a given coord (ra, dec)
 		integrated within a circular aperture of a given radius.
@@ -274,10 +342,13 @@ class Cube:
 		:param dec: Declination in degrees.
 		:param radius: Circular aperture radius in arcsec.
 		:param channel: Force extracton in a single channel of provided index (instead of the full cube).
-		:return: Spectrum as 1D array. Alternatively,  a single value if 2D map was loded, or single channel chosen.
+		:param freq: Frequency in GHz, takes precedence over channel param.
+		:return: Spectrum as 1D array. Alternatively, a single value if 2D map was loded, or single channel chosen.
 		"""
 
 		px, py = self.radec2pix(ra, dec)
+		if freq is not None:
+			channel = self.freq2pix(freq)
 
 		# take single pixel value if no aperture radius given
 		if radius <= 0:
@@ -306,16 +377,23 @@ class Cube:
 
 		return spec
 
-	def aperflux(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None):
+	def aperture_r(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None):
 		"""
-		Alias function of growing_aperture using the cumulative aperture mode.
+		Obtain integrated flux within a circular aperture as a function of radius.
+		If freq is undefined, will return the spectrum of the 3D cube.
+		Wrapper function. Check the "growing_aperture" method for details.
+		Units: ra[deg], dec[deg], maxradius[arcsec], binspacing[arcsec], freq[GHz]
+		:return: radius, flux, err, npix
 		"""
 		return self.growing_aperture(ra=ra, dec=dec, maxradius=maxradius, binspacing=binspacing,
 									 bins=bins, channel=channel, freq=freq, profile=False)
 
-	def profile(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None):
+	def profile_r(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None):
 		"""
-		Alias function of growing_aperture using the profile mode.
+		Obtain azimuthaly averaged profile as a function of radius.
+		Wrapper function. Check the "growing_aperture" method for details.
+		Units: ra[deg], dec[deg], maxradius[arcsec], binspacing[arcsec], freq[GHz]
+		:return: radius, flux, err, npix
 		"""
 		return self.growing_aperture(ra=ra, dec=dec, maxradius=maxradius, binspacing=binspacing,
 									 bins=bins, channel=channel, freq=freq, profile=True)
@@ -325,6 +403,7 @@ class Cube:
 		"""
 		Compute curve of growth at the given coordinate position in a circular aperture, growing up to the max radius.
 		If no coordinates are given, the center of the map is assumed.
+		If no frequency or channel is given, the whole spectrum is returned.
 		:param ra: Right ascention in degrees.
 		:param dec: Declination in degrees.
 		:param maxradius: Max radius for aperture integration in arcsec.
@@ -338,7 +417,9 @@ class Cube:
 		"""
 		self.log("Running growth_curve.")
 
+		# get coordinates in pixels
 		px, py = self.radec2pix(ra, dec)
+		# get grid of distances from the coordinate
 		distances = self.distance_grid(px, py) * self.pixsize
 
 		if freq is not None:
@@ -371,7 +452,7 @@ class Cube:
 
 		if profile:
 			# error on the mean
-			err = self.rms[channel]/np.sqrt(npix/self.beamvol)
+			err = self.rms[channel] / np.sqrt(npix / self.beamvol)
 		else:
 			# error estimate assuming Poissonian statistics: rms x sqrt(number of independent beams inside aperture)
 			err = self.rms[channel] * np.sqrt(npix / self.beamvol[channel])
@@ -412,9 +493,100 @@ class Cube:
 
 
 class MultiCube:
-	def __init__(self):
+	"""
+	A container like class to hold multiple cubes at the same time. Cubes are stored in a dictionary.
+	Exampple: mc = MultiCube("path_to_cube.image.fits") will load the cube, which is then accesible as mc["image"]
 
-		raise NotImplementedError
+	"""
 
-	# need image, residual, dirty for residual scaling - beamvol must be overriden in this case
-	# add model and psf specific things?
+	def __init__(self, filename=None, autoload_multi=True):
+		"""
+		Provide the file path to the final cleaned cube. Will try to find other adjacent cubes based on their names.
+		Standard key names are: image, residual, dirty, model, psf, pb
+
+		:param filename:
+		:param autoload_multi:
+		"""
+
+		# these are standard suffixes from CASA tclean output
+		# gildas output has different naming conventions, which are not implemnted here
+		keylist = ["image", "residual", "dirty", "pb", "model", "psf", "image.pbcor"]
+		self.cubes = dict(zip(keylist, [None]*len(keylist)))
+		self.basename = None
+
+		if filename is None:
+			# just setup the basic dictionary and exit
+			return
+		elif not os.path.exists(filename):
+			raise FileNotFoundError(filename)
+
+		filenames = dict(zip(keylist, [None]*len(keylist)))
+		filenames["image"] = filename
+
+		# get the basename, which is hopefully shared between different cubes
+		endings = [".image.tt0.fits", ".image.fits", ".fits"]
+		for ending in endings:
+			if filename.lower().endswith(ending):
+				self.basename = filename[:-len(ending)]
+				extension = ending.replace(".image", "")
+				break
+
+		# try to fill other filenames
+		if autoload_multi:
+			if self.basename is None:
+				raise ValueError("Unknown extension.")
+
+			# print("extension",extension)
+			for k in keylist:
+				# expected filename
+				filename_suffixed = self.basename + "." + k + extension
+				if os.path.exists(filename_suffixed):
+					filenames[k] = filename_suffixed
+
+		# load the cubes
+		for k in self.cubes.keys():
+			if filenames[k] is not None:
+				self.cubes[k] = Cube(filenames[k])
+
+	def add_cube(self, filename, key=None):
+		"""
+		Add provided fits file to the MultiCube instance.
+		Known keys are: "image", "residual", "dirty", "pb", "model", "psf", "image.pbcor"
+		If the filename does not end with these words, please provide a manual key.
+		:param filename: Path string to the fits image.
+		:param key: Dictionary key name used to store the cube.
+		:return:
+		"""
+		# try to estimate the key from the filename
+		if key is None:
+			# assuming the file ends in something like .residual.fits
+			suffix = str(filename).split(".")[-2]
+			# if this suffix matches preset ones
+			if suffix in self.cubes.keys():
+				key = suffix
+
+		if key is None:
+			raise ValueError("Please provide key under which to store the cube.")
+
+		# Load and store new cube
+		self[key] = Cube(filename)
+
+	def __getitem__(self, key):
+		return self.cubes[key]
+
+	def __setitem__(self, key, value):
+		self.cubes[key] = value
+
+	def log(self, text):
+		"""
+		Basic logger function to allow better functionality in the future development.
+		All class functions print info through this wrapper.
+		Could be extended to provide different levels of info, timestamps, or logging to a file.
+		"""
+		print(text)
+
+	def aperflux(self):
+		# TODO
+		# need image, residual, dirty for residual scaling - beamvol must be overriden in this case
+		return None
+
