@@ -312,7 +312,7 @@ class Cube:
 		distances = np.sqrt((yyy[np.newaxis, :] - py) ** 2 + (xxx[:, np.newaxis] - px) ** 2)
 		return distances
 
-	def spectrum(self, ra=None, dec=None, radius=0, channel=None, freq=None):
+	def spectrum(self, ra=None, dec=None, radius=0, channel=None, freq=None, calc_error=True):
 		"""
 		Extract the spectrum (for 3D cube) or a single flux density value (for 2D map) at a given coord (ra, dec)
 		integrated within a circular aperture of a given radius.
@@ -325,6 +325,7 @@ class Cube:
 		:param radius: Circular aperture radius in arcsec.
 		:param channel: Force extracton in a single channel of provided index (instead of the full cube).
 		:param freq: Frequency in GHz, takes precedence over channel param.
+		:param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
 		:return: spec, err, npix: spectrum, error estimate and number of pixels in the aperture
 		"""
 
@@ -332,17 +333,21 @@ class Cube:
 		if freq is not None:
 			channel = self.freq2pix(freq)
 
+		err = np.nan
+
 		# take single pixel value if no aperture radius given
 		if radius <= 0:
 			self.log("Extracting single pixel spectrum.")
 			spec = self.im[px, py, :]
-			err = self.rms[:]  # single pixel error is just rms
+			if calc_error:
+				err = self.rms[:]  # single pixel error is just rms
 			npix = np.ones(len(spec))
 			# use just a single channel
 			if channel is not None:
 				spec = spec[channel]
-				err = err[channel]
 				npix = npix[channel]
+				if calc_error:
+					err = err[channel]
 		else:
 			self.log("Extracting aperture spectrum.")
 			# grid of distances from the source in arcsec, need for the aperture mask
@@ -354,19 +359,25 @@ class Cube:
 			if channel is not None:
 				npix = np.sum(np.isfinite(self.im[:, :, channel][w]))
 				spec = np.nansum(self.im[:, :, channel][w]) / self.beamvol[channel]
-				err = self.rms[channel] * np.sqrt(npix / self.beamvol[channel])
+				if calc_error:
+					err = self.rms[channel] * np.sqrt(npix / self.beamvol[channel])
 			else:
 				spec = np.zeros(self.nch)
 				npix = np.zeros(self.nch)
 				for i in range(self.nch):
 					spec[i] = np.nansum(self.im[:, :, i][w]) / self.beamvol[i]
 					npix[i] = np.sum(np.isfinite(self.im[:, :, i][w]))
-				err = self.rms * np.sqrt(npix / self.beamvol)
+				if calc_error:
+					err = self.rms * np.sqrt(npix / self.beamvol)
 
 		if len(spec) == 1:
 			spec = spec[0]
-			err = err[0]
 			npix = npix[0]
+			if calc_error:
+				err = err[0]
+
+		if not calc_error:
+			err = np.full(len(spec), np.nan)
 
 		return spec, err, npix
 
