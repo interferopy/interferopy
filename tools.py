@@ -200,8 +200,7 @@ def dust_sobs(nu_obs, z, Mdust, Tdust, beta, cmb_contrast=True, cmb_heating=True
 
 def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, naxis=100, nointerpol=False):
 	"""
-	Performs median and mean (optionally rms weighted) stacking of multiple sources in a single radio map.
-
+	Perform median and mean (optionally rms weighted) stacking of multiple sources in a single radio map.
 	:param ras: List of right ascentions.
 	:param decs: List of declinations.
 	:param im: 2D radio map indexed as im[ra,dec].
@@ -339,3 +338,35 @@ def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, na
 	# fits.writeto(basepath+'_cuberms.fits',cuberms.T, stack_head, clobber=True)
 
 	return stack_mean, stack_median, stack_head, cube
+
+
+def hex2deg(ra_hms, dec_dms, frame='icrs'):
+	"""
+	Convert sexagesimal coords (hours:minutes:seconds, degrees:minutes:seconds) to degrees.
+	:param ra_hms: Right ascentions. String or list of strings.
+	:param dec_dms: Declinations. String or list of strings.
+	:param frame: Equinox frame. ALMA default is ICRS.
+	:return: ra_deg, dec_deg - 1D numpy arrays with coords in degrees
+	"""
+
+	# wrap single value in a list for iteration
+	single_val = False
+	if isinstance(ra_hms, str) and isinstance(dec_dms, str):
+		ra_hms = [ra_hms]
+		dec_dms = [dec_dms]
+		single_val = True
+
+	n = len(ra_hms)
+	ra_deg = np.zeros(n)
+	dec_deg = np.zeros(n)
+
+	for i in range(n):
+		coo = SkyCoord(str(ra_hms[i]) + " " + str(dec_dms[i]), frame=frame, unit=(u.hourangle, u.deg))
+		ra_deg[i] = coo.ra.deg
+		dec_deg[i] = coo.dec.deg
+
+	if single_val:
+		return ra_deg[0], dec_deg[0]
+	else:
+		return ra_deg, dec_deg
+
