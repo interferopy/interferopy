@@ -41,7 +41,7 @@ class Cube:
 		"""
 		Read the fits file and extract common useful data into Cube class attributes.
 		"""
-		self.log("Opening " + self.filename)
+		self.log("Open " + self.filename)
 		self.hdu = fits.open(self.filename)
 		self.head = self.hdu[0].header
 		self.pixsize = self.head["cdelt2"] * 3600  # arcsec, assumes square pixels
@@ -449,7 +449,7 @@ class Cube:
 
 		return radius, flux, err, npix
 
-	def aperture_r(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None):
+	def aperture_r(self, ra=None, dec=None, maxradius=1.0, binspacing=None, bins=None, channel=0, freq=None):
 		"""
 		Obtain integrated flux within a circular aperture as a function of radius.
 		If freq is undefined, will return the spectrum of the 3D cube.
@@ -460,7 +460,7 @@ class Cube:
 		return self.growing_aperture(ra=ra, dec=dec, maxradius=maxradius, binspacing=binspacing,
 									 bins=bins, channel=channel, freq=freq, profile=False)
 
-	def profile_r(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None):
+	def profile_r(self, ra=None, dec=None, maxradius=1.0, binspacing=None, bins=None, channel=0, freq=None):
 		"""
 		Obtain azimuthaly averaged profile as a function of radius.
 		Alias function. Check the "growing_aperture" method for details.
@@ -478,8 +478,11 @@ class Cube:
 		:return:
 		"""
 
+		if filename is None and self.filename is None:
+			raise ValueError("No filename was provided.")
+
 		if not overwrite and filename is None:
-			raise RuntimeError("Overwriting is disabled and no filename was provided.")
+			raise ValueError("Overwriting is disabled and no filename was provided.")
 
 		# use the input filename if none is provided
 		if overwrite and filename is None:
@@ -495,22 +498,23 @@ class Cube:
 class MultiCube:
 	"""
 	A container like class to hold multiple cubes at the same time. Cubes are stored in a dictionary.
-	Exampple: mc = MultiCube("path_to_cube.image.fits") will load the cube, which is then accesible as mc["image"]
+	Example: mc = MultiCube("path_to_cube.image.fits") will load the cube, which is then accesible as mc["image"]
 
 	"""
 
 	def __init__(self, filename=None, autoload_multi=True):
 		"""
 		Provide the file path to the final cleaned cube. Will try to find other adjacent cubes based on their names.
-		Standard key names are: image, residual, dirty, model, psf, pb
+		Standard key names from CASA are: image, residual, model, psf, pb, image.pbcor
+		Additional names are dirty, clean.comp
 
-		:param filename:
-		:param autoload_multi:
+		:param filename: Path string to the cleaned cube fits image.
+		:param autoload_multi: If true, attempt to find other cubes using preset (mostly CASA) suffixes.
 		"""
 
-		# these are standard suffixes from CASA tclean output
+		# these are standard suffixes from CASA tclean output (except "dirty")
 		# gildas output has different naming conventions, which are not implemnted here
-		keylist = ["image", "residual", "dirty", "pb", "model", "psf", "image.pbcor"]
+		keylist = ["image", "residual", "dirty", "pb", "model", "psf", "image.pbcor", "clean.comp"]
 		self.cubes = dict(zip(keylist, [None]*len(keylist)))
 		self.basename = None
 
@@ -523,6 +527,7 @@ class MultiCube:
 		filenames = dict(zip(keylist, [None]*len(keylist)))
 		filenames["image"] = filename
 
+		# TODO could improve searching, but there are multiple naming conventions
 		# get the basename, which is hopefully shared between different cubes
 		endings = [".image.tt0.fits", ".image.fits", ".fits"]
 		for ending in endings:
@@ -548,7 +553,9 @@ class MultiCube:
 			if filenames[k] is not None:
 				self.cubes[k] = Cube(filenames[k])
 
-	def add_cube(self, filename, key=None):
+		self.log("Loaded cubes: " + str(self.loaded_cubes))
+
+	def load_cube(self, filename, key=None):
 		"""
 		Add provided fits file to the MultiCube instance.
 		Known keys are: "image", "residual", "dirty", "pb", "model", "psf", "image.pbcor"
@@ -565,17 +572,32 @@ class MultiCube:
 			if suffix in self.cubes.keys():
 				key = suffix
 
+		# Load and store new cube
+		cub = Cube(filename)
+
 		if key is None:
 			raise ValueError("Please provide key under which to store the cube.")
 
-		# Load and store new cube
-		self[key] = Cube(filename)
+		if len(self.loaded_cubes) > 0:
+			if cub.im.shape != self[self.loaded_cubes[0]].im.shape:
+				self.log("Warning: Loaded cube has a different shape than existing one!")
+
+		self[key] = cub
 
 	def __getitem__(self, key):
 		return self.cubes[key]
 
 	def __setitem__(self, key, value):
 		self.cubes[key] = value
+
+	def get_loaded_cubes(self):
+		"""
+		Get a list of loaded cubes (those that are not None).
+		:return: List of key names.
+		"""
+		return [k for k in self.cubes.keys() if self.cubes[k] is not None]
+
+	loaded_cubes = property(get_loaded_cubes)
 
 	def log(self, text):
 		"""
@@ -585,8 +607,102 @@ class MultiCube:
 		"""
 		print(text)
 
-	def aperflux(self):
-		# TODO
-		# need image, residual, dirty for residual scaling - beamvol must be overriden in this case
+	def make_clean_comp(self, overwrite=False):
+		"""
+		Generate a clean component cube. Defined as the cleaned cube minus the residual, or, alternatively,
+		model image convolved with the clean beam. This cube is not outputted by CASA.
+		:param overwrite: If true, overrides any present "clean.comp" cube.
+		:return: None
+		"""
+		self.log("Generate clean component cube.")
+
+		if self["image"] is None:
+			raise ValueError("Cleaned cube is missing.")
+		if self["residual"] is None:
+			raise ValueError("Residual cube is missing.")
+		if self["clean.comp"] is not None and not overwrite:
+			self.log("Warning: clean.comp cube already exists and overwriting is disabled.")
+
+		cub = Cube(self["image"].filename)
+		cub.im = self["image"].im - self["residual"].im
+		cub.filename = None  # This cube is no longer the one on disk, so empty the filename as a precaution
+		self["clean.comp"] = cub
+		# return self["clean.comp"]
+
+	def make_no_pbcorr(self, overwrite=False):
+		"""
+		Generate a flat noise cube from the primary beam (PB) corrected one, and the PB response (which is <= 1).
+		PB corrected cube has valid fluxes, but rms computation is not straightforward.
+		PB corrected cube = flat noise cube / PB response
+		:param overwrite: If true, overrides any present "image"" cube.
+		:return: None
+		"""
+		self.log("Generate flat noise image cube from the PB corrected one.")
+
+		if self["image.pbcor"] is None:
+			raise ValueError("PB corrected cleaned cube is missing.")
+		if self["pb"] is None:
+			raise ValueError("PB response cube is missing.")
+		if self["image"] is not None and not overwrite:
+			self.log("Warning: image cube already exists and overwriting is disabled.")
+
+		cub = Cube(self["image.pbcor"].filename)
+		cub.im = self["image.pbcor"].im * self["pb"].im
+		cub.filename = None  # This cube is no longer the one on disk, so empty the filename as a precaution
+		self["image"] = cub
+		# return self["image"]
+
+	def __cubes_prepare(self):
+		"""
+		Perform several prelimiaries before attempting residual scaled flux extraction.
+		:return: True if no problems are detected, False otherwise.
+		"""
+
+		only_pbcor_exists = self["image"] is None and self["image.pbcor"] is not None and self["image.pb"] is not None
+		if only_pbcor_exists:
+			self.make_no_pbcorr()
+
+		cubes_exists = self["image"] is not None and self["dirty"] is not None and self["residual"] is not None
+		if not cubes_exists:
+			self.log("Error: Need all three cubes: image, dirty, residual!")
+			return False
+
+		# generate clean component cube (this is not a standard CASA output)
+		if self["clean.comp"] is None:
+			self.make_clean_comp()
+
+		shapes_equal = self["image"].im.shape == self["dirty"].im.shape == self["residual"].im.shape
+		if not shapes_equal:
+			self.log("Error: Cube shapes are not equal!")
+			return False
+
+		# Residual scaling assumes clean beam in all maps
+		# Override the beam volume in dirty and residual maps to the cleaned one
+		bvol = self["image"].beamvol
+		self["dirty"].beamvol = bvol
+		self["residual"].beamvol = bvol
+		self["clean.comp"].beamvol = bvol
+
+		return True
+
+	def spectrum_corrected(self, ra=None, dec=None, radius=1.0, channel=None, freq=None):
+		# residual scaling
+
+		px, py = self["image"].radec2pix(ra, dec)
+		if freq is not None:
+			channel = self["image"].freq2pix(freq)
+
+		# take single pixel value if no aperture radius given
+		if radius <= 0:
+			raise ValueError("No aperture is defined!")
+
+		# check and prepare cubes for residual scaling
+		if not self.__cubes_prepare():
+			raise ValueError("Cubes check failed!")
+
+		# f = self["image"].spectrum(ra=ra, dec=dec, radius=radius, channel=channel, freq=freq)
+
+		# return spec
+
 		return None
 
