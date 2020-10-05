@@ -700,9 +700,31 @@ class MultiCube:
 		if not self.__cubes_prepare():
 			raise ValueError("Cubes check failed!")
 
-		# f = self["image"].spectrum(ra=ra, dec=dec, radius=radius, channel=channel, freq=freq)
+		# could be optimized by sharing some arrays between runs, e.g. distance grid
+
+		# run aperture extraction on all cubes
+		params=dict(ra=ra, dec=dec, radius=radius, channel=channel, freq=freq)
+		f = self["image"].spectrum(**params)
+		c = self["clean.comp"].spectrum(**params)
+		r = self["residual"].spectrum(**params)
+		d = self["dirty"].spectrum(**params)
+
+		# err=self["image"].rms*np.sqrt(npix/beamvol)
+		#
+		# epsilon=c/(d-r)
+		# g=epsilon*d
+
+		# TODO estimate epsilon from high S/N part
+		# TODO add npix to spectrum?
+
+		# return bins, f, c, r, d, epsilon, g, err, rms, npix
 
 		# return spec
+
+		return None
+
+	def growing_aperture_corrected(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None,
+								   channel=0, freq=None, profile=False):
 
 		return None
 
