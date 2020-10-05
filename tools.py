@@ -198,7 +198,7 @@ def dust_sobs(nu_obs, z, Mdust, Tdust, beta, cmb_contrast=True, cmb_heating=True
 	return S_obs
 
 
-def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, naxis=100, nointerpol=False):
+def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, naxis=100, interpol=True):
 	"""
 	Perform median and mean (optionally rms weighted) stacking of multiple sources in a single radio map.
 	:param ras: List of right ascentions.
@@ -209,7 +209,7 @@ def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, na
 	:param pathout: Filename for the output stacks, if None, no output is written to disk.
 	:param overwrite: Overwrites files when saving (pathout).
 	:param naxis: The size of the cutout square in pixels.
-	:param nointerpol: set to True to skip any subpixel inteprolatio
+	:param interpol: Perform subpixel inteprolation (bicubic spline)
 	:return: stack_mean, stack_median, stack_head, cube - 2D map, 2D map, text header, 3D cube of cutouts
 	"""
 
@@ -236,19 +236,19 @@ def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, na
 		px = np.atleast_1d(pxs)[i]
 		py = np.atleast_1d(pys)[i]
 
-		if nointerpol:
-			# round the pixel to closest integer when not interpolating
-			px = int(round(px))
-			py = int(round(py))
-			xoff = 0
-			yoff = 0
-		else:
+		if interpol:
 			# offset between the source and pixel centres
 			xoff = px - int(px)
 			yoff = py - int(py)
 			# truncate source center for array positioning for interpolation
 			px = int(px)
 			py = int(py)
+		else:
+			xoff = 0
+			yoff = 0
+			# round the pixel to closest integer when not interpolating
+			px = int(round(px))
+			py = int(round(py))
 
 		# calculate different offsets for cropping (edge effects)
 		left = int(px - halfxis)
@@ -279,11 +279,11 @@ def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, na
 				subimrms[0 + crop_left:naxis - 1 + crop_right + 1, 0 + crop_bottom:naxis - 1 + crop_top + 1] = \
 					imrms[left + crop_left:right + crop_right + 1, bottom + crop_bottom:top + crop_top + 1]
 
-			if nointerpol:
+			if interpol:
 				# nans are not handled in interpolation, replace them temporarily with 0
 				w = np.isnan(subim)
 				subim[w] = 0
-				subimrms[w] = 0
+				subimrms[w] = 1.0
 
 				# bicubic spline
 				f = interp2d(range(naxis), range(naxis), subim, kind='cubic')
@@ -316,7 +316,7 @@ def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, na
 		cuberms[:, :, i] = subimrms
 
 	# colapse the cube to mean and median stacks while handling NaNs properly
-	cube_masked = np.ma.MaskedArray(cube, mask=np.isnan(cube))
+	cube_masked = np.ma.MaskedArray(cube, mask=~(np.isfinite(cube)))
 	stack_mean = np.ma.average(cube_masked, weights=cuberms ** (-2), axis=2).filled(np.nan)
 	stack_median = np.ma.median(cube_masked, axis=2).filled(np.nan)
 
