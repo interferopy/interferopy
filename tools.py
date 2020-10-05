@@ -13,7 +13,7 @@ from astropy.coordinates import SkyCoord
 
 def sigfig(x, digits=2):
 	"""
-	Round a number to a number of significant digits
+	Round a number to a number of significant digits.
 	:param x: Input number.
 	:param digits: Number of significant digits.
 	:return:
@@ -119,7 +119,7 @@ def ghz2kms(width_ghz, freq_ghz):
 
 def calcrms(arr, fitgauss=False, around_zero=True, clip_sigma=3, maxiter=20):
 	"""
-	Calculate rms by iteratively disregarding outlier pixels (beyond clip_sigma x rms values)
+	Calculate rms by iteratively disregarding outlier pixels (beyond clip_sigma x rms values).
 	:param arr: Input array.
 	:param fitgauss: If True, Gaussian will be fitted onto the distribution of negative pixels.
 	:param around_zero: Assume no systematic offsets, i.e., noise oscillates around zero.
@@ -165,7 +165,6 @@ def calcrms(arr, fitgauss=False, around_zero=True, clip_sigma=3, maxiter=20):
 		a, sigma = popt
 		sigma = np.abs(sigma)
 
-	if fitgauss:
 		return rms, sigma
 	else:
 		return rms
@@ -233,13 +232,13 @@ def dust_lum(nu_rest, Mdust, Tdust, beta):
 	return lum_nu
 
 
-def dust_sobs(nu_obs, z, Mdust, Tdust, beta, cmb_contrast=True, cmb_heating=True):
+def dust_sobs(nu_obs, z, mass_dust, temp_dust, beta, cmb_contrast=True, cmb_heating=True):
 	"""
 	Compute observed flux density of the dust continuum, assuming a modified black body.
 	:param nu_obs: Observed frame frequency in Hz.
 	:param z: Redshift of the source.
-	:param Mdust: Total dust mass in kg.
-	:param Tdust: Intrinsic dust temperature in K (the source would have at z=0).
+	:param mass_dust: Total dust mass in kg.
+	:param temp_dust: Intrinsic dust temperature in K (the source would have at z=0).
 	:param beta: Emissivity coefficient, dimensionless.
 	:param cmb_contrast: Correct for cosmic microwave background contrast.
 	:param cmb_heating: Correct for cosmic microwave background heating (important at high z where Tcmb ~ Tdust).
@@ -247,25 +246,25 @@ def dust_sobs(nu_obs, z, Mdust, Tdust, beta, cmb_contrast=True, cmb_heating=True
 	"""
 
 	cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
-	DL = cosmo.luminosity_distance(z).to(u.m).value  # m
+	dl = cosmo.luminosity_distance(z).to(u.m).value  # m
 	nu_rest = nu_obs * (1 + z)
-	Tcmb0 = 2.73  # cmb temperature at z=0
-	Tcmb = (1 + z) * Tcmb0
+	temp_cmb0 = 2.73  # cmb temperature at z=0
+	temp_cmb = (1 + z) * temp_cmb0
 
 	# cmb heating (high redshift) and contrast corrections from da Cunha+2013
 	if cmb_heating:
-		Tdustz = (Tdust ** (4 + beta) + Tcmb0 ** (4 + beta) * ((1 + z) ** (4 + beta) - 1)) ** (1 / (4 + beta))
+		temp_dustz = (temp_dust ** (4 + beta) + temp_cmb0 ** (4 + beta) * ((1 + z) ** (4 + beta) - 1)) ** (1 / (4 + beta))
 	else:
-		Tdustz = Tdust
+		temp_dustz = temp_dust
 
 	if cmb_contrast:
-		f_cmb = 1. - blackbody(nu_rest, Tcmb) / blackbody(nu_rest, Tdustz)
+		f_cmb = 1. - blackbody(nu_rest, temp_cmb) / blackbody(nu_rest, temp_dustz)
 	else:
 		f_cmb = 1
 
-	S_obs = f_cmb * (1 + z) / (4 * np.pi * DL ** 2) * dust_lum(nu_rest, Mdust, Tdustz, beta)
+	flux_obs = f_cmb * (1 + z) / (4 * np.pi * dl ** 2) * dust_lum(nu_rest, mass_dust, temp_dustz, beta)
 
-	return S_obs
+	return flux_obs
 
 
 def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, naxis=100, interpol=True):
@@ -284,7 +283,7 @@ def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, na
 	"""
 
 	# how many objects
-	N = len(np.atleast_1d(ras))
+	n = len(np.atleast_1d(ras))
 
 	# calculate half of the cutout size
 	halfxis = naxis / 2
@@ -297,11 +296,11 @@ def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, na
 	pxs, pys = wc.all_world2pix(ras, decs, 0)
 
 	# allocate space for the stack cube
-	cube = np.full((naxis, naxis, N), np.nan)
-	cuberms = np.full((naxis, naxis, N), 1.0)
+	cube = np.full((naxis, naxis, n), np.nan)
+	cuberms = np.full((naxis, naxis, n), 1.0)
 
 	# fill the cube with (interpolated) cutouts
-	for i in range(N):
+	for i in range(n):
 		# source position in pixels (float)
 		px = np.atleast_1d(pxs)[i]
 		py = np.atleast_1d(pys)[i]
@@ -439,4 +438,3 @@ def hex2deg(ra_hms, dec_dms, frame='icrs'):
 		return ra_deg[0], dec_deg[0]
 	else:
 		return ra_deg, dec_deg
-
