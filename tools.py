@@ -11,18 +11,26 @@ from astropy import wcs
 from astropy.coordinates import SkyCoord
 
 
-# TODO: add more detailed comments and param descriptions
-
-# round a number to a given number of significant digits
 def sigfig(x, digits=2):
+	"""
+	Round a number to a number of significant digits
+	:param x: Input number.
+	:param digits: Number of significant digits.
+	:return:
+	"""
 	if x == 0:
 		return 0
 	else:
 		return round(x, digits - int(np.floor(np.log10(abs(x)))) - 1)
 
 
-# get weighted average from masked arrays
 def weighted_avg(values, weights):
+	"""
+	Compute weighted average of a masked array. Used in computing mean amplitude vs uv from flagged data.
+	:param values: Input masked array.
+	:param weights: Input weights.
+	:return: average, standard_error, standard_deviation
+	"""
 	average = np.ma.average(values, weights=weights)
 	variance = np.ma.average((values - average) ** 2, weights=weights)
 	standard_deviation = np.ma.sqrt(variance)
@@ -30,51 +38,95 @@ def weighted_avg(values, weights):
 	return average, standard_error, standard_deviation
 
 
-# Gaussian profile
 def gauss(x, a, mu, sigma):
-	# a=gauss amplitude
-	# mu=center
-	# sigma=gauss sigma
+	"""
+	Gaussian profile. Not normalized.
+	:param x: Values of x where to compute the profile.
+	:param a: Gaussian amplitude (peak height).
+	:param mu: Gaussian center (peak position).
+	:param sigma: Gaussian sigma (width).
+	:return: Value at x.
+	"""
 	return a * np.exp(-(x - mu) ** 2 / (2 * sigma ** 2))
 
 
-# Gaussian profile plus a constant vertical offset (e.g., line on top of simple continuum)
 def gausscont(x, b, a, mu, sigma):
-	# b=const offset
-	# a=gauss amplitude
-	# mu=center
-	# sigma=gauss sigma
+	"""
+	Gaussian profile (not normalized) on top of a constant continuum.
+	:param x: Values of x where to compute the profile.
+	:param b: Constant offset (in y-axis direction).
+	:param a: Gaussian amplitude (peak height).
+	:param mu: Gaussian center (peak position).
+	:param sigma: Gaussian sigma (width).
+	:return: Value at x.
+	"""
 	return b + gauss(x, a, mu, sigma)
 
 
-# Gaussian widths conversions
 def fwhm2sig(fwhm):
+	"""
+	Convert Gaussian FWHM to sigma.
+	"""
 	return fwhm / (2 * np.sqrt(2 * np.log(2)))
 
 
 def sig2fwhm(sigma):
+	"""
+	Convert Gaussian sigma to FWHM.
+	"""
 	return sigma * (2 * np.sqrt(2 * np.log(2)))
 
 
-# Channel width coversions between velocity and frequency (using radio velocity definition)
 def kms2mhz(width_kms, freq_ghz):
+	"""
+	Convert channel width in km/s into MHz at the specified reference frequency.
+	:param width_kms:
+	:param freq_ghz:
+	:return:
+	"""
 	return width_kms / (const.c / 1000) * freq_ghz * 1000  # widthmhz
 
 
 def mhz2kms(width_mhz, freq_ghz):
+	"""
+	Convert channel width in MHz into km/s at the specified reference frequency.
+	:param width_mhz:
+	:param freq_ghz:
+	:return:
+	"""
 	return width_mhz / (freq_ghz * 1000) * (const.c / 1000)  # widthkms
 
 
 def kms2ghz(width_kms, freq_ghz):
+	"""
+	Convert channel width in km/s into GHz at the specified reference frequency.
+	:param width_kms:
+	:param freq_ghz:
+	:return:
+	"""
 	return width_kms / (const.c / 1000) * freq_ghz  # widthghz
 
 
 def ghz2kms(width_ghz, freq_ghz):
+	"""
+	Convert channel width in GHz into km/s at the specified reference frequency.
+	:param width_ghz:
+	:param freq_ghz:
+	:return:
+	"""
 	return width_ghz / freq_ghz * (const.c / 1000)  # widthkms
 
 
-# Calculate rms in the map (disregarding outlier pixels)
 def calcrms(arr, fitgauss=False, around_zero=True, clip_sigma=3, maxiter=20):
+	"""
+	Calculate rms by iteratively disregarding outlier pixels (beyond clip_sigma x rms values)
+	:param arr: Input array.
+	:param fitgauss: If True, Gaussian will be fitted onto the distribution of negative pixels.
+	:param around_zero: Assume no systematic offsets, i.e., noise oscillates around zero.
+	:param clip_sigma: Clip values beyond these many sigmas (in both positive and negative directions).
+	:param maxiter: Maximum number of iterations to perform.
+	:return: rms or, if fitgauss is Truem rms and Gaussian sigma
+	"""
 	a = arr[np.isfinite(arr)].flatten()
 	rms = 0
 
@@ -119,40 +171,54 @@ def calcrms(arr, fitgauss=False, around_zero=True, clip_sigma=3, maxiter=20):
 		return rms
 
 
-# get Gaussian beam volume in sr
 def beam_volume_sr(bmaj, bmin=None):
+	"""
+	Compute Gaussian beam volume.
+	:param bmaj: Major axis FWHM in arcsec.
+	:param bmin: Minor axis FWHM in arcsec. If not provided, will assume circular beam bmin=bmaj.
+	:return: Beam volume in steradians.
+	"""
+
 	# bmaj and bmin are major and minor FWHMs of a Gaussian (synthesised) beam, in arcsec
 	if bmin is None:
 		bmin = bmaj
 
 	omega = np.pi / 4 / np.log(2) * (bmaj / 3600 / 180 * np.pi) * (bmin / 3600 / 180 * np.pi)  # convert to radians
-
 	return omega
 
 
-# get surface brightness temperature sensitivity in Kelvins
-def surf_temp(freq, sigma, theta):
-	# freq in GHz
-	# sigma = rms noise in Jy/beam
-	# theta = resolution FWHM in arcsec
+def surf_temp(freq, rms, theta):
+	"""
+	Copmute surface brightness temperature sensitivity in Kelvins. Used to compare radio map sensitivities.
+	:param freq: Observed frequency in GHz.
+	:param rms: Noise in the map in Jy/beam.
+	:param theta: Beam FWHM in arcsec. Assumes circular beam.
+	:return: Temperature in Kelvins.
+	"""
 
-	temp = sigma * 1e-26 / beam_volume_sr(theta) * const.c ** 2 / (2 * const.k * (freq * 1e9) ** 2)
-
+	temp = rms * 1e-26 / beam_volume_sr(theta) * const.c ** 2 / (2 * const.k * (freq * 1e9) ** 2)
 	return temp
 
 
-# black body radiation (Planck's law)
-def blackbody(nu, T):
-	return 2 * const.h * nu ** 3 / const.c ** 2 / (np.exp(const.h * nu / (const.k * T)) - 1)
+def blackbody(nu, temp):
+	"""
+	Planck's law for black body emission, per unit frequency.
+	:param nu: Rest frame frequency in Hz.
+	:param temp: Temperature in K.
+	:return:
+	"""
+	return 2 * const.h * nu ** 3 / const.c ** 2 / (np.exp(const.h * nu / (const.k * temp)) - 1)
 
 
-# get intrinsic dust luminosity at specific rest frame frequency
 def dust_lum(nu_rest, Mdust, Tdust, beta):
-	# nu in Hz - rest frame frequency
-	# Mdust in kg - total dust mass
-	# Tdust in K - dust temperature
-	# beta no dim
-	# returns luminosity (at rest frequency nu) in W/Hz
+	"""
+	Compute intrinsic dust luminosity at specific rest frame frequency assuming modified black body emission.
+	:param nu_rest: Rest frame frequency in Hz.
+	:param Mdust: Total dust mass in kg.
+	:param Tdust:  Dust temperature in K.
+	:param beta: Emissivity coefficient, dimensionless.
+	:return: Luminosity (at rest frequency nu) in W/Hz
+	"""
 
 	# dust opacity from Dunne+2003
 	kappa_ref = 2.64  # m**2/kg
@@ -164,17 +230,21 @@ def dust_lum(nu_rest, Mdust, Tdust, beta):
 	# kappa_nu_ref=c/850e-6
 
 	lum_nu = 4 * const.pi * kappa_ref * (nu_rest / kappa_nu_ref) ** beta * Mdust * blackbody(nu_rest, Tdust)
-
 	return lum_nu
 
 
-# get observed flux density of the dust continuum, assuming a modified black body
 def dust_sobs(nu_obs, z, Mdust, Tdust, beta, cmb_contrast=True, cmb_heating=True):
-	# nu_obs in Hz - observed frame frequency
-	# Mdust in kg - total dust mass
-	# beta - modified black body parameter
-	# Tdust is intrinisic dust temperature (at z=0)
-	# returns observed flux density in W/Hz/m^2
+	"""
+	Compute observed flux density of the dust continuum, assuming a modified black body.
+	:param nu_obs: Observed frame frequency in Hz.
+	:param z: Redshift of the source.
+	:param Mdust: Total dust mass in kg.
+	:param Tdust: Intrinsic dust temperature in K (the source would have at z=0).
+	:param beta: Emissivity coefficient, dimensionless.
+	:param cmb_contrast: Correct for cosmic microwave background contrast.
+	:param cmb_heating: Correct for cosmic microwave background heating (important at high z where Tcmb ~ Tdust).
+	:return: Observed flux density in W/Hz/m^2.
+	"""
 
 	cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 	DL = cosmo.luminosity_distance(z).to(u.m).value  # m
