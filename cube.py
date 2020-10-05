@@ -325,7 +325,7 @@ class Cube:
 		:param radius: Circular aperture radius in arcsec.
 		:param channel: Force extracton in a single channel of provided index (instead of the full cube).
 		:param freq: Frequency in GHz, takes precedence over channel param.
-		:return: Spectrum as 1D array. Alternatively, a single value if 2D map was loded, or single channel chosen.
+		:return: spec, err, npix: spectrum, error estimate and number of pixels in the aperture
 		"""
 
 		px, py = self.radec2pix(ra, dec)
@@ -336,9 +336,13 @@ class Cube:
 		if radius <= 0:
 			self.log("Extracting single pixel spectrum.")
 			spec = self.im[px, py, :]
+			err = self.rms[:]  # single pixel error is just rms
+			npix = np.ones(len(spec))
 			# use just a single channel
 			if channel is not None:
 				spec = spec[channel]
+				err = err[channel]
+				npix = npix[channel]
 		else:
 			self.log("Extracting aperture spectrum.")
 			# grid of distances from the source in arcsec, need for the aperture mask
@@ -348,16 +352,23 @@ class Cube:
 			w = distances <= radius
 
 			if channel is not None:
+				npix = np.sum(np.isfinite(self.im[:, :, channel][w]))
 				spec = np.nansum(self.im[:, :, channel][w]) / self.beamvol[channel]
+				err = self.rms[channel] * np.sqrt(npix / self.beamvol[channel])
 			else:
 				spec = np.zeros(self.nch)
+				npix = np.zeros(self.nch)
 				for i in range(self.nch):
 					spec[i] = np.nansum(self.im[:, :, i][w]) / self.beamvol[i]
+					npix[i] = np.sum(np.isfinite(self.im[:, :, i][w]))
+				err = self.rms * np.sqrt(npix / self.beamvol)
 
 		if len(spec) == 1:
 			spec = spec[0]
+			err = err[0]
+			npix = npix[0]
 
-		return spec
+		return spec, err, npix
 
 	def single_pixel_value(self, ra=None, dec=None, freq=None, channel=None):
 		"""
