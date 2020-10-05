@@ -707,7 +707,7 @@ class MultiCube:
 
 		return True
 
-	def spectrum_corrected(self, ra=None, dec=None, radius=1.0, channel=None, freq=None):
+	def spectrum_corrected(self, ra=None, dec=None, radius=1.0, channel=None, freq=None, calc_error=False):
 		# residual scaling
 
 		px, py = self["image"].radec2pix(ra, dec)
@@ -725,28 +725,27 @@ class MultiCube:
 		# could be optimized by sharing some arrays between runs, e.g. distance grid
 
 		# run aperture extraction on all cubes
+		# the beam volume should be the same in all of them (checked by __cubes_prepare)
 		params=dict(ra=ra, dec=dec, radius=radius, channel=channel, freq=freq)
-		f = self["image"].spectrum(**params)
-		c = self["clean.comp"].spectrum(**params)
-		r = self["residual"].spectrum(**params)
-		d = self["dirty"].spectrum(**params)
+		flux_image, err, npix = self["image"].spectrum(calc_error=calc_error, **params)  # compute rms only on this map
+		flux_clean, _, _ = self["clean.comp"].spectrum(calc_error=False, **params)
+		flux_residual, _, _ = self["residual"].spectrum(calc_error=False, **params)
+		flux_dirty, _, _ = self["dirty"].spectrum(calc_error=False, **params)
 
-		# err=self["image"].rms*np.sqrt(npix/beamvol)
-		#
-		# epsilon=c/(d-r)
-		# g=epsilon*d
+		epsilon=flux_clean/(flux_dirty-flux_residual)
+		flux_corr = epsilon * flux_dirty
+		flux_err = err
 
 		# TODO estimate epsilon from high S/N part
-		# TODO add npix to spectrum?
+		# TODO output table for all values?
+		# TODO primary beam?
 
-		# return bins, f, c, r, d, epsilon, g, err, rms, npix
-
-		# return spec
-
-		return None
+		return flux_corr, flux_err
 
 	def growing_aperture_corrected(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None,
 								   channel=0, freq=None, profile=False):
+
+		# TODO implement
 
 		return None
 
