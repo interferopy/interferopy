@@ -312,24 +312,29 @@ class Cube:
 		distances = np.sqrt((yyy[np.newaxis, :] - py) ** 2 + (xxx[:, np.newaxis] - px) ** 2)
 		return distances
 
-	def spectrum(self, ra=None, dec=None, radius=0, channel=None, freq=None, calc_error=True):
+	def spectrum(self, ra=None, dec=None, radius=0, px=None, py=None, channel=None, freq=None, calc_error=True):
 		"""
 		Extract the spectrum (for 3D cube) or a single flux density value (for 2D map) at a given coord (ra, dec)
 		integrated within a circular aperture of a given radius.
+		Coordinates can be given in degrees (ra, dec) or pixels (px, py).
 		If no coordinates are given, the center of the map is assumed.
+		Single plane can be chosen instead of full spectrum by defining freq or channel.
 		If no radius is given, a single pixel value is extracted (usual units Jy/beam), otherwise aperture
 		integrated spectrum is extracted (units of Jy).
 		Note: use the freqs field (or velocities method) to get the x-axis values.
 		:param ra: Right Ascention in degrees.
 		:param dec: Declination in degrees.
 		:param radius: Circular aperture radius in arcsec.
+		:param px: Right Ascention pixel coord.
+		:param py: Declination pixel coord.
 		:param channel: Force extracton in a single channel of provided index (instead of the full cube).
-		:param freq: Frequency in GHz, takes precedence over channel param.
+		:param freq: Frequency in GHz (alternative to channel).
 		:param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
 		:return: spec, err, npix: spectrum, error estimate and number of pixels in the aperture
 		"""
 
-		px, py = self.radec2pix(ra, dec)
+		if px is None or py is None:
+			px, py = self.radec2pix(ra, dec)
 		if freq is not None:
 			channel = self.freq2pix(freq)
 
@@ -399,10 +404,11 @@ class Cube:
 		"""
 		return self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=channel)
 
-	def growing_aperture(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None, channel=0, freq=None,
-						 profile=False):
+	def growing_aperture(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None,  px=None,
+						 py=None, channel=0, freq=None, profile=False):
 		"""
 		Compute curve of growth at the given coordinate position in a circular aperture, growing up to the max radius.
+		Coordinates can be given in degrees (ra, dec) or pixels (px, py).
 		If no coordinates are given, the center of the map is assumed.
 		If no frequency or channel is given, the whole spectrum is returned.
 		:param ra: Right ascention in degrees.
@@ -410,6 +416,8 @@ class Cube:
 		:param maxradius: Max radius for aperture integration in arcsec.
 		:param binspacing: Resolution of the growth flux curve in arcsec, default is one pixel size.
 		:param bins: Custom bins for curve growth (1D np array).
+		:param px: Right Ascention pixel coord.
+		:param py: Declination pixel coord.
 		:param channel: Index of the cube channel to take.
 		:param freq: Frequency in GHz, takes precedence over channel param.
 		:param profile: If True, compute azimuthally averaged profile, if False, compute cumulative aperture values
@@ -419,7 +427,8 @@ class Cube:
 		self.log("Running growth_curve.")
 
 		# get coordinates in pixels
-		px, py = self.radec2pix(ra, dec)
+		if px is None or py is None:
+			px, py = self.radec2pix(ra, dec)
 		# get grid of distances from the coordinate
 		distances = self.distance_grid(px, py) * self.pixsize
 
@@ -707,12 +716,8 @@ class MultiCube:
 
 		return True
 
-	def spectrum_corrected(self, ra=None, dec=None, radius=1.0, channel=None, freq=None, calc_error=False):
+	def spectrum_corrected(self, ra=None, dec=None, radius=1.0, px=None, py=None, channel=None, freq=None, calc_error=False):
 		# residual scaling
-
-		px, py = self["image"].radec2pix(ra, dec)
-		if freq is not None:
-			channel = self["image"].freq2pix(freq)
 
 		# take single pixel value if no aperture radius given
 		if radius <= 0:
@@ -726,12 +731,13 @@ class MultiCube:
 
 		# run aperture extraction on all cubes
 		# the beam volume should be the same in all of them (checked by __cubes_prepare)
-		params=dict(ra=ra, dec=dec, radius=radius, channel=channel, freq=freq)
+		params=dict(ra=ra, dec=dec, radius=radius, px=px, py=py, channel=channel, freq=freq)
 		flux_image, err, npix = self["image"].spectrum(calc_error=calc_error, **params)  # compute rms only on this map
 		flux_clean, _, _ = self["clean.comp"].spectrum(calc_error=False, **params)
 		flux_residual, _, _ = self["residual"].spectrum(calc_error=False, **params)
 		flux_dirty, _, _ = self["dirty"].spectrum(calc_error=False, **params)
 
+		# TODO: check for zero divides
 		epsilon=flux_clean/(flux_dirty-flux_residual)
 		flux_corr = epsilon * flux_dirty
 		flux_err = err
