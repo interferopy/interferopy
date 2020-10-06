@@ -9,11 +9,13 @@ import scipy.constants as const
 
 
 class Cube:
-	# TODO: comment class attributes
-	# TODO: try opening all maps: dirty, clean, model, psf
-	# TODO: time calcrms on aspecs using .T and without .T
+	# TODO: field types
+	# TODO: field comments?
+	# TODO: check types in return
 
-	def __init__(self, filename):
+	# TODO: time calcrms on big cube using .T and without .T
+
+	def __init__(self, filename: str):
 		"""
 		Create a cube object by reading the fits image.
 		:param filename: Path string to the fits image.
@@ -145,7 +147,7 @@ class Cube:
 			if type(self.beamvol) is Table.Column:
 				self.beamvol = self.beamvol.data
 
-	def log(self, text):
+	def log(self, text: str):
 		"""
 		Basic logger function to allow better functionality in the future development.
 		All class functions print info through this wrapper.
@@ -162,7 +164,7 @@ class Cube:
 			# calc rms per channel
 			if self.nch > 1:
 				self.__rms = np.zeros(self.nch)
-				self.log("Computing rms of each channel.")
+				self.log("Computing rms in each channel.")
 				for i in range(self.nch):
 					self.__rms[i] = tools.calcrms(self.im[:, :, i])
 			else:
@@ -175,7 +177,7 @@ class Cube:
 
 	rms = property(get_rms, set_rms)
 
-	def deltavel(self, reffreq=None):
+	def deltavel(self, reffreq: float = None):
 		"""
 		Compute channel width in velocity units (km/s).
 		:param reffreq: Computed around specific velocity. If empty, use referent one from the header.
@@ -187,7 +189,7 @@ class Cube:
 
 		return self.deltafreq / reffreq * const.c / 1000  # in km/s
 
-	def vels(self, reffreq):
+	def vels(self, reffreq: float):
 		"""
 		Compute velocities of all cube channels for a given reference frequency.
 		:param reffreq: Reference frequency in GHz. If empty, use referent one from the header.
@@ -199,7 +201,7 @@ class Cube:
 
 		return const.c / 1000 * (1 - self.freqs / reffreq)
 
-	def radec2pix(self, ra=None, dec=None):
+	def radec2pix(self, ra: float = None, dec: float = None):
 		"""
 		Convert ra and dec coordinates into pixels to be used as im[px, py].
 		If no coords are given, the center of the map is assumed.
@@ -225,7 +227,7 @@ class Cube:
 
 		return px, py
 
-	def pix2radec(self, px=None, py=None):
+	def pix2radec(self, px: float = None, py: float = None):
 		"""
 		Convert pixels coordinates into ra and dec.
 		If no coords are given, the center of the map is assumed.
@@ -244,7 +246,7 @@ class Cube:
 
 		return ra, dec
 
-	def freq2pix(self, freq=None):
+	def freq2pix(self, freq: float = None):
 		"""
 		Get the channel number of requested frequency.
 		:param freq: Frequency in GHz.
@@ -260,7 +262,8 @@ class Cube:
 			pz = int(round(pz))
 			return pz
 
-		if freq < np.min(self.freqs) or freq > np.max(self.freqs):
+		if freq < np.min(self.freqs) - 0.5 * np.abs(self.deltafreq) \
+				or freq > np.max(self.freqs) + 0.5 * np.abs(self.deltafreq):
 			raise ValueError("Requested frequency is outside of the available range.")
 			return None
 
@@ -276,7 +279,7 @@ class Cube:
 
 		return pz
 
-	def pix2freq(self, pz=None):
+	def pix2freq(self, pz: int = None):
 		"""
 		Get the frequency of a given channel.
 		If no channel is given, the center channel is assumed.
@@ -298,9 +301,10 @@ class Cube:
 
 		return self.freqs[pz]
 
-	def distance_grid(self, px, py):
+	def distance_grid(self, px: float, py: float) -> np.ndarray:
 		"""
-		Grid of distances from the chosen pixel. Uses small angle approximation (simple Pythagorean distances).
+		Grid of distances from the chosen pixel (can be subpixel accuracy).
+		Uses small angle approximation (simple Pythagorean distances).
 		Distances are measured in numbers of pixels.
 		:param px: Index of x coord.
 		:param py: Index of y coord.
@@ -312,7 +316,8 @@ class Cube:
 		distances = np.sqrt((yyy[np.newaxis, :] - py) ** 2 + (xxx[:, np.newaxis] - px) ** 2)
 		return distances
 
-	def spectrum(self, ra=None, dec=None, radius=0, px=None, py=None, channel=None, freq=None, calc_error=True):
+	def spectrum(self, ra: float = None, dec: float = None, radius=0.0,
+				 px: int = None, py:int = None, channel:int = None, freq: float = None, calc_error=False):
 		"""
 		Extract the spectrum (for 3D cube) or a single flux density value (for 2D map) at a given coord (ra, dec)
 		integrated within a circular aperture of a given radius.
@@ -320,7 +325,7 @@ class Cube:
 		If no coordinates are given, the center of the map is assumed.
 		Single plane can be chosen instead of full spectrum by defining freq or channel.
 		If no radius is given, a single pixel value is extracted (usual units Jy/beam), otherwise aperture
-		integrated spectrum is extracted (units of Jy).
+		integrated spectrum is extracted (usual units of Jy).
 		Note: use the freqs field (or velocities method) to get the x-axis values.
 		:param ra: Right Ascention in degrees.
 		:param dec: Declination in degrees.
@@ -332,6 +337,8 @@ class Cube:
 		:param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
 		:return: spec, err, npix: spectrum, error estimate and number of pixels in the aperture
 		"""
+
+		# TODO: fix return types
 
 		if px is None or py is None:
 			px, py = self.radec2pix(ra, dec)
@@ -349,10 +356,10 @@ class Cube:
 			npix = np.ones(len(spec))
 			# use just a single channel
 			if channel is not None:
-				spec = spec[channel]
-				npix = npix[channel]
+				spec = np.array([spec[channel]])
+				npix = np.array([npix[channel]])
 				if calc_error:
-					err = err[channel]
+					err = np.array([err[channel]])
 		else:
 			self.log("Extracting aperture spectrum.")
 			# grid of distances from the source in arcsec, need for the aperture mask
@@ -362,10 +369,12 @@ class Cube:
 			w = distances <= radius
 
 			if channel is not None:
-				npix = np.sum(np.isfinite(self.im[:, :, channel][w]))
-				spec = np.nansum(self.im[:, :, channel][w]) / self.beamvol[channel]
+				npix = np.array([np.sum(np.isfinite(self.im[:, :, channel][w]))])
+				spec = np.array([np.nansum(self.im[:, :, channel][w]) / self.beamvol[channel]])
 				if calc_error:
 					err = self.rms[channel] * np.sqrt(npix / self.beamvol[channel])
+				else:
+					err = np.array([np.nan])
 			else:
 				spec = np.zeros(self.nch)
 				npix = np.zeros(self.nch)
@@ -374,15 +383,8 @@ class Cube:
 					npix[i] = np.sum(np.isfinite(self.im[:, :, i][w]))
 				if calc_error:
 					err = self.rms * np.sqrt(npix / self.beamvol)
-
-		if len(spec) == 1:
-			spec = spec[0]
-			npix = npix[0]
-			if calc_error:
-				err = err[0]
-
-		if not calc_error:
-			err = np.full(len(spec), np.nan)
+				else:
+					err = np.full(self.nch, np.nan)
 
 		return spec, err, npix
 
@@ -395,7 +397,7 @@ class Cube:
 		"""
 		return self.spectrum(ra=ra, dec=dec, radius=0, freq=freq, channel=channel)
 
-	def aperture_value(self, ra=None, dec=None, radius=1, freq=None, channel=None):
+	def aperture_value(self, ra=None, dec=None, radius=1.0, freq=None, channel=None):
 		"""
 		Get an aperture integrated value at the given coord.
 		If freq is undefined, will return the spectrum of the 3D cube.
@@ -404,8 +406,9 @@ class Cube:
 		"""
 		return self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=channel)
 
-	def growing_aperture(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None,  px=None,
-						 py=None, channel=0, freq=None, profile=False):
+	def growing_aperture(self, ra: float = None, dec: float = None, maxradius=1.0,
+						 binspacing: float = None, bins: list = None,
+						 px: int = None, py: int = None, channel: int = 0, freq: float = None, profile=False):
 		"""
 		Compute curve of growth at the given coordinate position in a circular aperture, growing up to the max radius.
 		Coordinates can be given in degrees (ra, dec) or pixels (px, py).
@@ -425,6 +428,8 @@ class Cube:
 		associated Poissionain error (based on number of beams inside the aprture and the map rms), number of pixels
 		"""
 		self.log("Running growth_curve.")
+
+		# TODO: fix return types
 
 		# get coordinates in pixels
 		if px is None or py is None:
@@ -501,7 +506,7 @@ class Cube:
 		return self.growing_aperture(ra=ra, dec=dec, maxradius=maxradius, binspacing=binspacing,
 									 bins=bins, channel=channel, freq=freq, profile=True)
 
-	def save_fitsfile(self, filename=None, overwrite=False):
+	def save_fitsfile(self, filename: str = None, overwrite=False):
 		"""
 		Save the cube in a fits file by storing the image and the header.
 		:param filename: Path string to the output file. Uses input filename by default
@@ -533,7 +538,7 @@ class MultiCube:
 
 	"""
 
-	def __init__(self, filename=None, autoload_multi=True):
+	def __init__(self, filename: str = None, autoload_multi=True):
 		"""
 		Provide the file path to the final cleaned cube. Will try to find other adjacent cubes based on their names.
 		Standard key names from CASA are: image, residual, model, psf, pb, image.pbcor
@@ -546,7 +551,7 @@ class MultiCube:
 		# these are standard suffixes from CASA tclean output (except "dirty")
 		# gildas output has different naming conventions, which are not implemnted here
 		keylist = ["image", "residual", "dirty", "pb", "model", "psf", "image.pbcor", "clean.comp"]
-		self.cubes = dict(zip(keylist, [None]*len(keylist)))
+		self.cubes = dict(zip(keylist, [None] * len(keylist)))
 		self.basename = None
 
 		if filename is None:
@@ -555,11 +560,12 @@ class MultiCube:
 		elif not os.path.exists(filename):
 			raise FileNotFoundError(filename)
 
-		filenames = dict(zip(keylist, [None]*len(keylist)))
+		filenames = dict(zip(keylist, [None] * len(keylist)))
 		filenames["image"] = filename
 
 		# TODO could improve searching, but there are multiple naming conventions
 		# get the basename, which is hopefully shared between different cubes
+		extension = ".fits"
 		endings = [".image.tt0.fits", ".image.fits", ".fits"]
 		for ending in endings:
 			if filename.lower().endswith(ending):
@@ -586,7 +592,7 @@ class MultiCube:
 
 		self.log("Loaded cubes: " + str(self.loaded_cubes))
 
-	def load_cube(self, filename, key=None):
+	def load_cube(self, filename: str, key: str = None):
 		"""
 		Add provided fits file to the MultiCube instance.
 		Known keys are: "image", "residual", "dirty", "pb", "model", "psf", "image.pbcor"
@@ -615,10 +621,10 @@ class MultiCube:
 
 		self[key] = cub
 
-	def __getitem__(self, key):
+	def __getitem__(self, key: str):
 		return self.cubes[key]
 
-	def __setitem__(self, key, value):
+	def __setitem__(self, key: str, value: Cube):
 		self.cubes[key] = value
 
 	def get_loaded_cubes(self):
@@ -630,7 +636,15 @@ class MultiCube:
 
 	loaded_cubes = property(get_loaded_cubes)
 
-	def log(self, text):
+	def get_freqs(self):
+		if len(self.loaded_cubes) > 0:
+			return self[self.loaded_cubes[0]].freqs  # best to pick self["image"].freqs
+		else:
+			raise ValueError("No cubes present!")
+
+	freqs = property(get_freqs)
+
+	def log(self, text: str):
 		"""
 		Basic logger function to allow better functionality in the future development.
 		All class functions print info through this wrapper.
@@ -658,9 +672,10 @@ class MultiCube:
 		cub.im = self["image"].im - self["residual"].im
 		cub.filename = None  # This cube is no longer the one on disk, so empty the filename as a precaution
 		self["clean.comp"] = cub
-		# return self["clean.comp"]
 
-	def make_no_pbcorr(self, overwrite=False):
+	# return self["clean.comp"]
+
+	def make_flatnoise(self, overwrite=False):
 		"""
 		Generate a flat noise cube from the primary beam (PB) corrected one, and the PB response (which is <= 1).
 		PB corrected cube has valid fluxes, but rms computation is not straightforward.
@@ -681,7 +696,8 @@ class MultiCube:
 		cub.im = self["image.pbcor"].im * self["pb"].im
 		cub.filename = None  # This cube is no longer the one on disk, so empty the filename as a precaution
 		self["image"] = cub
-		# return self["image"]
+
+	# return self["image"]
 
 	def __cubes_prepare(self):
 		"""
@@ -689,9 +705,10 @@ class MultiCube:
 		:return: True if no problems are detected, False otherwise.
 		"""
 
+		# if necessary, use pb corrected map and pb to generate flat noise map
 		only_pbcor_exists = self["image"] is None and self["image.pbcor"] is not None and self["image.pb"] is not None
 		if only_pbcor_exists:
-			self.make_no_pbcorr()
+			self.make_flatnoise()
 
 		cubes_exists = self["image"] is not None and self["dirty"] is not None and self["residual"] is not None
 		if not cubes_exists:
@@ -699,8 +716,9 @@ class MultiCube:
 			return False
 
 		# generate clean component cube (this is not a standard CASA output)
-		if self["clean.comp"] is None:
-			self.make_clean_comp()
+		# actually it is not necessary to have the full cube for residual scaling
+		# if self["clean.comp"] is None:
+		# 	self.make_clean_comp()
 
 		shapes_equal = self["image"].im.shape == self["dirty"].im.shape == self["residual"].im.shape
 		if not shapes_equal:
@@ -712,12 +730,32 @@ class MultiCube:
 		bvol = self["image"].beamvol
 		self["dirty"].beamvol = bvol
 		self["residual"].beamvol = bvol
-		self["clean.comp"].beamvol = bvol
 
 		return True
 
-	def spectrum_corrected(self, ra=None, dec=None, radius=1.0, px=None, py=None, channel=None, freq=None, calc_error=False):
-		# residual scaling
+	def spectrum_corrected(self, ra: float = None, dec: float = None, radius=1.0,
+						   px: int = None, py: int = None, channel: int = None, freq: float = None,
+						   calc_error=True, sn_cut=2.5, apply_pb_corr=True):
+		"""
+		Extract aperture integrated spectrum from the cube using the residual scaling to account for the dirty beam.
+		Coordinates can be given in degrees (ra, dec) or pixels (px, py).
+		If no coordinates are given, the center of the map is assumed.
+
+		For details on the method see appendix A in Novak et al. (2019):
+		https://ui.adsabs.harvard.edu/abs/2019ApJ...881...63N/abstract
+
+		:param ra: Right Ascention in degrees.
+		:param dec: Declination in degrees.
+		:param radius: Circular aperture radius in arcsec.
+		:param px: Right Ascention pixel coord (alternative to ra).
+		:param py: Declination pixel coord (alternative to dec).
+		:param channel: Channel index (alternative to freq)
+		:param freq: Frequency in GHz. Extract only in a single channel instead of the full cube.
+		:param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
+		:param sn_cut: Use emission above this S/N threshold to estimate the clean-to-dirty beam ratio, need calc_error.
+		:param apply_pb_corr: Scale flux and error by the primary beam response, needs loaded pb map
+		:return: flux, err, tab - 1D array for corrected flux and error estimate; tab is a Table with all computations.
+		"""
 
 		# take single pixel value if no aperture radius given
 		if radius <= 0:
@@ -727,26 +765,89 @@ class MultiCube:
 		if not self.__cubes_prepare():
 			raise ValueError("Cubes check failed!")
 
-		# could be optimized by sharing some arrays between runs, e.g. distance grid
+		if freq is not None:
+			channel = self["image"].freq2pix(freq)
 
 		# run aperture extraction on all cubes
 		# the beam volume should be the same in all of them (checked by __cubes_prepare)
-		params=dict(ra=ra, dec=dec, radius=radius, px=px, py=py, channel=channel, freq=freq)
+		params = dict(ra=ra, dec=dec, radius=radius, px=px, py=py, channel=channel, freq=freq)
 		flux_image, err, npix = self["image"].spectrum(calc_error=calc_error, **params)  # compute rms only on this map
-		flux_clean, _, _ = self["clean.comp"].spectrum(calc_error=False, **params)
 		flux_residual, _, _ = self["residual"].spectrum(calc_error=False, **params)
 		flux_dirty, _, _ = self["dirty"].spectrum(calc_error=False, **params)
+		flux_clean = flux_image - flux_residual
 
-		# TODO: check for zero divides
-		epsilon=flux_clean/(flux_dirty-flux_residual)
-		flux_corr = epsilon * flux_dirty
-		flux_err = err
+		# alternatively, force creation of the clean components cube
+		# self.make_clean_comp()
+		# flux_clean, _, _ = self["clean.comp"].spectrum(calc_error=False, **params)
 
-		# TODO estimate epsilon from high S/N part
-		# TODO output table for all values?
-		# TODO primary beam?
+		# this can be numerically unstable if there is no clean flux or if dirty == residual
+		# nothing much to do about it, it's a limitation of the method
+		epsilon = flux_clean / (flux_dirty - flux_residual)
 
-		return flux_corr, flux_err
+		# estimate a single epsilon across the full spectrum
+		# it is not expected to change a lot across channels (if PSF is consistent, and bandwidth is not too large)
+		epsilon_fix = np.nanmedian(epsilon)
+		if calc_error:
+			if channel is None:
+				rmses = self["image"].rms
+			else:
+				rmses = np.array([self["image"].rms[channel]])
+			# use only high S/N channels
+			w = (flux_clean / err) > sn_cut
+			if np.sum(w) > 0:
+				epsilon_fix = np.nanmedian(epsilon[w])
+			else:
+				self.log("Warning: Nothing above S/N>" + str(sn_cut) + ", using all channels for epsilon.")
+		else:
+			rmses = np.full_like(flux_image, fill_value=np.nan)
+			self.log("Using all channels for clean-to-dirty beam ratio (epsilon).")
+
+		# corrected flux is estimated from the dirty map and the clean-to-dirty beam ratio (epsilon)
+		flux = epsilon_fix * flux_dirty
+
+		# apply PB correction if possible
+		if apply_pb_corr and "pb" in self.loaded_cubes:
+			self.log("Correcting flux and err for PB response.")
+			pb, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq, calc_error=False)
+			flux = flux / pb
+			err = err / pb
+		elif apply_pb_corr and "pb" not in self.loaded_cubes:
+			self.log("Warning: Cannot correct for PB, missing pb map.")
+			pb = np.full(len(flux_image), np.nan)
+		else:
+			self.log("Flux is not PB corrected.")
+			pb = np.full(len(flux_image), np.nan)
+
+		# crude estimate if something went poorly, epsilon is too small or too big
+		if epsilon_fix < 0.01 or epsilon_fix > 100:
+			self.log("Warning: The clean-to-dirty beam ratio (epsilon) is badly determined.")
+		epsilon_fix = np.full(len(flux), epsilon_fix)
+
+		if channel is None:
+			channels = np.arange(len(flux))
+		else:
+			channels = [channel]
+
+		freqs = self.freqs[channels]
+
+		tab = Table([channels,  # Channel index
+					 freqs,  # Frequency of the channel in GHz
+					 flux,  # Aperture flux corrected for residual and primary beam response
+					 err,  # Error estimate on the corrected flux
+					 epsilon_fix,  # Best estimate of the clean-to-dirty beam ratio, fixed across all channels
+					 flux_image,  # Aperture flux measured in the final map (assumes clean beam)
+					 flux_dirty,  # Aperture flux measured in the dirty map (assumes clean beam)
+					 flux_residual,  # Aperture flux measured in the residual map (assumes clean beam)
+					 flux_clean,  # Aperture flux measured in the clean components map (= final - residual)
+					 npix,  # Number of pixels inside the aperture
+					 epsilon,  # Clean-to-dirty beam ratio in the channel
+					 rmses,  # Rms noise of the channel
+					 pb],  # Primary beam response (<=1) at the given coordinate, single pixel value
+					names=["channel", "freq", "flux", "err", "epsilon_fix",
+						   "flux_image", "flux_dirty", "flux_residual", "flux_clean",
+						   "npix", "epsilon", "rms", "pb"])
+
+		return flux, err, tab
 
 	def growing_aperture_corrected(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None,
 								   channel=0, freq=None, profile=False):
@@ -754,4 +855,3 @@ class MultiCube:
 		# TODO implement
 
 		return None
-
