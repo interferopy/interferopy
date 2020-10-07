@@ -409,7 +409,7 @@ def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, na
 	return stack_mean, stack_median, stack_head, cube
 
 
-def hex2deg(ra_hms, dec_dms, frame='icrs'):
+def sex2deg(ra_hms, dec_dms, frame='icrs'):
 	"""
 	Convert sexagesimal coords (hours:minutes:seconds, degrees:minutes:seconds) to degrees.
 	:param ra_hms: Right ascentions. String or list of strings.
