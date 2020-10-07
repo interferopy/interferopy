@@ -205,7 +205,7 @@ class Cube:
 		"""
 		Convert ra and dec coordinates into pixels to be used as im[px, py].
 		If no coords are given, the center of the map is assumed.
-		:param ra: Right Ascention in degrees.
+		:param ra: Right ascention in degrees.
 		:param dec: Declination in degrees.
 		:return: Coords x and y in pixels (0 based index).
 		"""
@@ -317,7 +317,8 @@ class Cube:
 		return distances
 
 	def spectrum(self, ra: float = None, dec: float = None, radius=0.0,
-				 px: int = None, py:int = None, channel:int = None, freq: float = None, calc_error=False):
+				 px: int = None, py: int = None, channel: int = None, freq: float = None, calc_error=False) \
+			-> (np.ndarray, np.ndarray, np.ndarray):
 		"""
 		Extract the spectrum (for 3D cube) or a single flux density value (for 2D map) at a given coord (ra, dec)
 		integrated within a circular aperture of a given radius.
@@ -327,10 +328,10 @@ class Cube:
 		If no radius is given, a single pixel value is extracted (usual units Jy/beam), otherwise aperture
 		integrated spectrum is extracted (usual units of Jy).
 		Note: use the freqs field (or velocities method) to get the x-axis values.
-		:param ra: Right Ascention in degrees.
+		:param ra: Right ascention in degrees.
 		:param dec: Declination in degrees.
 		:param radius: Circular aperture radius in arcsec.
-		:param px: Right Ascention pixel coord.
+		:param px: Right ascention pixel coord.
 		:param py: Declination pixel coord.
 		:param channel: Force extracton in a single channel of provided index (instead of the full cube).
 		:param freq: Frequency in GHz (alternative to channel).
@@ -338,28 +339,25 @@ class Cube:
 		:return: spec, err, npix: spectrum, error estimate and number of pixels in the aperture
 		"""
 
-		# TODO: fix return types
-
 		if px is None or py is None:
 			px, py = self.radec2pix(ra, dec)
 		if freq is not None:
 			channel = self.freq2pix(freq)
-
-		err = np.nan
 
 		# take single pixel value if no aperture radius given
 		if radius <= 0:
 			self.log("Extracting single pixel spectrum.")
 			spec = self.im[px, py, :]
 			if calc_error:
-				err = self.rms[:]  # single pixel error is just rms
+				err = np.array(self.rms[:])  # single pixel error is just rms
+			else:
+				err = np.full_like(spec, np.nan)
 			npix = np.ones(len(spec))
 			# use just a single channel
 			if channel is not None:
 				spec = np.array([spec[channel]])
 				npix = np.array([npix[channel]])
-				if calc_error:
-					err = np.array([err[channel]])
+				err = np.array([err[channel]])
 		else:
 			self.log("Extracting aperture spectrum.")
 			# grid of distances from the source in arcsec, need for the aperture mask
@@ -372,7 +370,7 @@ class Cube:
 				npix = np.array([np.sum(np.isfinite(self.im[:, :, channel][w]))])
 				spec = np.array([np.nansum(self.im[:, :, channel][w]) / self.beamvol[channel]])
 				if calc_error:
-					err = self.rms[channel] * np.sqrt(npix / self.beamvol[channel])
+					err = np.array(self.rms[channel] * np.sqrt(npix / self.beamvol[channel]))
 				else:
 					err = np.array([np.nan])
 			else:
@@ -382,33 +380,55 @@ class Cube:
 					spec[i] = np.nansum(self.im[:, :, i][w]) / self.beamvol[i]
 					npix[i] = np.sum(np.isfinite(self.im[:, :, i][w]))
 				if calc_error:
-					err = self.rms * np.sqrt(npix / self.beamvol)
+					err = np.array(self.rms * np.sqrt(npix / self.beamvol))
 				else:
-					err = np.full(self.nch, np.nan)
+					err = np.full_like(spec, np.nan)
 
 		return spec, err, npix
 
-	def single_pixel_value(self, ra=None, dec=None, freq=None, channel=None):
+	def single_pixel_value(self, ra: float = None, dec: float = None, freq: float = None,
+						   channel: int = None, calc_error: bool = False):
 		"""
-		Get a single pixel value at the given coord.
-		If freq is undefined, will return the spectrum of the 3D cube.
-		Units: ra[deg], dec[deg], freq[GHz]
-		Alias function. Check the "spectrum" method for details. The radius is fixed to 0 here.
+		Get a single pixel value at the given coord. Optionally, return associated error.
+		Wrapper function for the "spectrum" method. If None, assumes central pixel.
+		:param ra: Right ascention in degrees.
+		:param dec: Declination in degrees.
+		:param freq: Frequency in GHz. If None, computes whole spectrum.
+		:param channel: Channel index (alternative to freq).
+		:param calc_error: If true, returns also an error estimate (rms).
+		:return: value or (value, error)
 		"""
-		return self.spectrum(ra=ra, dec=dec, radius=0, freq=freq, channel=channel)
 
-	def aperture_value(self, ra=None, dec=None, radius=1.0, freq=None, channel=None):
+		spec, err, _ = self.spectrum(ra=ra, dec=dec, radius=0, freq=freq, channel=channel, calc_error=calc_error)
+		if calc_error:
+			return spec, err
+		else:
+			return spec
+
+	def aperture_value(self, ra: float = None, dec: float = None, freq: float = None, channel: int = None,
+					   radius: float = 1.0, calc_error=False):
 		"""
-		Get an aperture integrated value at the given coord.
-		If freq is undefined, will return the spectrum of the 3D cube.
-		Units: ra[deg], dec[deg], radius[arcsec], freq[GHz]
-		Alias function. Check the "spectrum" method for details. The radius is defaulted to 1 arcsec here.
+		Get an aperture integrated value at the given coord. Optionally, return associated error.
+		Wrapper function for the "spectrum" method.
+		:param ra: Right ascention in degrees. If None, assumes central pixel.
+		:param dec: Declination in degrees.
+		:param freq: Frequency in GHz. If None, computes whole spectrum.
+		:param channel: Channel index (alternative to freq).
+		:param radius: Aperture radius in arcsec.
+		:param calc_error: If true, returns also an error estimate (rms x sqrt(num of beams in aperture)).
+		:return: value or (value, error)
 		"""
-		return self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=channel)
+
+		spec, err, _ = self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=channel, calc_error=calc_error)
+		if calc_error:
+			return spec, err
+		else:
+			return spec
 
 	def growing_aperture(self, ra: float = None, dec: float = None, maxradius=1.0,
 						 binspacing: float = None, bins: list = None,
-						 px: int = None, py: int = None, channel: int = 0, freq: float = None, profile=False):
+						 px: int = None, py: int = None, channel: int = 0, freq: float = None, profile=False) \
+			-> (np.ndarray, np.ndarray, np.ndarray, np.ndarray):
 		"""
 		Compute curve of growth at the given coordinate position in a circular aperture, growing up to the max radius.
 		Coordinates can be given in degrees (ra, dec) or pixels (px, py).
@@ -419,7 +439,7 @@ class Cube:
 		:param maxradius: Max radius for aperture integration in arcsec.
 		:param binspacing: Resolution of the growth flux curve in arcsec, default is one pixel size.
 		:param bins: Custom bins for curve growth (1D np array).
-		:param px: Right Ascention pixel coord.
+		:param px: Right ascention pixel coord.
 		:param py: Declination pixel coord.
 		:param channel: Index of the cube channel to take.
 		:param freq: Frequency in GHz, takes precedence over channel param.
@@ -429,7 +449,7 @@ class Cube:
 		"""
 		self.log("Running growth_curve.")
 
-		# TODO: fix return types
+		# TODO: fix explanation when freq is not given
 
 		# get coordinates in pixels
 		if px is None or py is None:
@@ -450,30 +470,30 @@ class Cube:
 		w = np.isfinite(self.im[:, :, channel])
 
 		# histogram by default sums the number of pixels
-		npix = np.histogram(distances[w], bins=bins)[0]
+		npix = np.array(np.histogram(distances[w], bins=bins)[0])
 		if profile:
 			pass
 		else:
-			npix = np.cumsum(npix)
+			npix = np.array(np.cumsum(npix))
 
 		# pixel values are added as histogram weights to get the sum of pixel values
 		flux = np.histogram(distances[w], bins=bins, weights=self.im[:, :, channel][w])[0]
 		if profile:
 			# mean value - azimuthally averaged
-			flux = flux / npix
+			flux = np.array(flux / npix)
 		else:
 			# cumulative flux inside an aperture is the sum of all pixel values divided by the beam volume
 			flux = np.cumsum(flux) / self.beamvol[channel]
 
 		if profile:
 			# error on the mean
-			err = self.rms[channel] / np.sqrt(npix / self.beamvol)
+			err = np.array(self.rms[channel] / np.sqrt(npix / self.beamvol))
 		else:
 			# error estimate assuming Poissonian statistics: rms x sqrt(number of independent beams inside aperture)
-			err = self.rms[channel] * np.sqrt(npix / self.beamvol[channel])
+			err = np.array(self.rms[channel] * np.sqrt(npix / self.beamvol[channel]))
 
 		# centers of bins
-		radius = 0.5 * (bins[1:] + bins[:-1])
+		radius = np.array(0.5 * (bins[1:] + bins[:-1]))
 
 		# old loop version, human readable, but super slow in execution for large apertures and lots of pixels
 		# for i in range(len(bins)-1):
@@ -485,7 +505,8 @@ class Cube:
 
 		return radius, flux, err, npix
 
-	def aperture_r(self, ra=None, dec=None, maxradius=1.0, binspacing=None, bins=None, channel=0, freq=None):
+	def aperture_r(self, ra: float = None, dec: float = None, freq: float = None,
+				   maxradius:float = 1.0, binspacing: float = None, bins: list = None):
 		"""
 		Obtain integrated flux within a circular aperture as a function of radius.
 		If freq is undefined, will return the spectrum of the 3D cube.
@@ -494,9 +515,10 @@ class Cube:
 		:return: radius, flux, err, npix
 		"""
 		return self.growing_aperture(ra=ra, dec=dec, maxradius=maxradius, binspacing=binspacing,
-									 bins=bins, channel=channel, freq=freq, profile=False)
+									 bins=bins, freq=freq, profile=False)
 
-	def profile_r(self, ra=None, dec=None, maxradius=1.0, binspacing=None, bins=None, channel=0, freq=None):
+	def profile_r(self, ra: float = None, dec: float = None, freq: float = None,
+				  maxradius: float = 1.0, binspacing: float = None, bins: list = None, channel: int = 0):
 		"""
 		Obtain azimuthaly averaged profile as a function of radius.
 		Alias function. Check the "growing_aperture" method for details.
@@ -699,7 +721,7 @@ class MultiCube:
 
 	# return self["image"]
 
-	def __cubes_prepare(self):
+	def __cubes_prepare(self) -> bool:
 		"""
 		Perform several prelimiaries before attempting residual scaled flux extraction.
 		:return: True if no problems are detected, False otherwise.
@@ -744,10 +766,10 @@ class MultiCube:
 		For details on the method see appendix A in Novak et al. (2019):
 		https://ui.adsabs.harvard.edu/abs/2019ApJ...881...63N/abstract
 
-		:param ra: Right Ascention in degrees.
+		:param ra: Right ascention in degrees.
 		:param dec: Declination in degrees.
 		:param radius: Circular aperture radius in arcsec.
-		:param px: Right Ascention pixel coord (alternative to ra).
+		:param px: Right ascention pixel coord (alternative to ra).
 		:param py: Declination pixel coord (alternative to dec).
 		:param channel: Channel index (alternative to freq)
 		:param freq: Frequency in GHz. Extract only in a single channel instead of the full cube.
@@ -847,7 +869,7 @@ class MultiCube:
 						   "flux_image", "flux_dirty", "flux_residual", "flux_clean",
 						   "npix", "epsilon", "rms", "pb"])
 
-		return flux, err, tab
+		return np.array(flux), np.array(err), tab
 
 	def growing_aperture_corrected(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None,
 								   channel=0, freq=None, profile=False):
