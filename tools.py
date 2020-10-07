@@ -67,14 +67,14 @@ def fwhm2sig(fwhm):
 	"""
 	Convert Gaussian FWHM to sigma.
 	"""
-	return fwhm / (2 * np.sqrt(2 * np.log(2)))
+	return np.abs(fwhm) / (2 * np.sqrt(2 * np.log(2)))
 
 
 def sig2fwhm(sigma):
 	"""
 	Convert Gaussian sigma to FWHM.
 	"""
-	return sigma * (2 * np.sqrt(2 * np.log(2)))
+	return np.abs(sigma) * (2 * np.sqrt(2 * np.log(2)))
 
 
 def kms2mhz(width_kms, freq_ghz):

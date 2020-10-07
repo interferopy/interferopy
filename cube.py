@@ -885,6 +885,7 @@ class MultiCube:
 
 		# corrected flux is estimated from the dirty map and the clean-to-dirty beam ratio (epsilon)
 		flux = epsilon_fix * flux_dirty
+		err = epsilon_fix * err  # TODO: should the error estimate be scaled with epsilon as well?
 
 		# apply PB correction if possible
 		if apply_pb_corr and "pb" in self.loaded_cubes:
@@ -980,6 +981,7 @@ class MultiCube:
 
 		epsilon = flux_clean / (flux_dirty - flux_residual)
 		flux = np.array(epsilon * flux_dirty)
+		err = epsilon * err  # TODO: should the error estimate be scaled with epsilon as well?
 		nbeam = npix / self["image"].beamvol[channel]
 
 		# apply PB correction if possible
