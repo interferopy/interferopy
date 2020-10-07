@@ -3,38 +3,68 @@ import numpy as np
 from astropy.io import fits
 from astropy.table import Table
 from astropy import wcs
-# import astropy.units as u
-import interferopy.tools as tools
 import scipy.constants as const
+
+import interferopy.tools as tools
 
 
 class Cube:
-	# TODO: field types
-	# TODO: field comments?
-	# TODO: check types in return
+	"""
+	Cube object represents interferometric data such as a map (2D) or a cube (3D).
+	Allows performing tasks such as aperture integration or spectrum extraction.
+	It is instantiated by reading in a fits file.
 
-	# TODO: time calcrms on big cube using .T and without .T
+	Example:
+		filename="cube.image.fits"
+		ra, dec, freq = (205.533741, 9.477317341, 222.54) # coord for the emission line
+		c=Cube(filename)
+		# spectrum from the circular aperture, with associated error
+		flux, err, _ = c.spectrum(ra=ra, dec=dec, radius=1.5, calc_error=True)
+		# curve of growth up to the maximum radius, in steps of one pixel, in a chosen frequency channel
+		radius, flux, err, _ = c.growing_aperture(ra=ra, dec=dec, freq=freq, maxradius=5, calc_error=True)
+	"""
 
 	def __init__(self, filename: str):
 		"""
-		Create a cube object by reading the fits image.
 		:param filename: Path string to the fits image.
 		"""
 		if os.path.exists(filename):
 			self.filename = filename
 			self.hdu = None
+			"""Hdu of the loaded fits file."""
+
 			self.head = None
-			self.im = None
-			self.wc = None
+			"""Image header of the loaded fits file."""
+
+			self.im: np.ndarray = None
+			"""Data cube indexed as im[ra, dec, freq]."""
+
+			self.wcs: wcs.WCS = None
+			"""Datacube world coordinate system."""
+
 			self.beam = None
-			self.beamvol = None
-			self.pixsize = None
-			self.nch = None
-			self.freqs = None
-			self.reffreq = None
-			self.deltafreq = None
-			self.__rms = None
-			# Compute above values, except rms, which is computed on demand.
+			"""Table of beams per channel, keywords: bmaj, bmin, bpa."""
+
+			self.beamvol: np.ndarray = None
+			"""Beam volume in pixels (number of pixels in a beam)."""
+
+			self.pixsize: float = None
+			"""Size of the pixel in arcsec."""
+
+			self.nch: int = None
+			"""Number of channels in a cube."""
+
+			self.freqs: np.ndarray = None
+			"""Array of frequencies corresponding to cube channels."""
+
+			self.reffreq: float = None
+			"""Reference frequency in GHz (from image header)."""
+
+			self.deltafreq: float = None
+			"""Channel width in GHz."""
+
+			self.__rms: np.ndarray = None
+			"""Array of rms values per channel. Computed on demand."""
 			self.__load_fitsfile()
 		else:
 			raise FileNotFoundError(filename)
@@ -75,7 +105,7 @@ class Cube:
 		self.naxis = naxis
 
 		# save the world coord system
-		self.wc = wcs.WCS(self.head, naxis=naxis)
+		self.wcs = wcs.WCS(self.head, naxis=naxis)
 
 		# populate frequency details (freq array, channel size, number of channels)
 		# convert from velocity header if necessary, scale to GHz
@@ -84,13 +114,13 @@ class Cube:
 			nch = self.im.shape[2]  # number of (freq) channels in the cube
 			# if frequencies are already 3rd axis
 			if str(self.head["CTYPE3"]).strip().lower() == "freq":
-				_, _, freqs = self.wc.all_pix2world(int(self.im.shape[0] / 2), int(self.im.shape[1] / 2), range(nch), 0)
+				_, _, freqs = self.wcs.all_pix2world(int(self.im.shape[0] / 2), int(self.im.shape[1] / 2), range(nch), 0)
 				freqs *= 1e-9  # in GHz
 				self.deltafreq = self.head["CDELT3"] * 1e-9
 				self.reffreq = self.head["CRVAL3"] * 1e-9
 			# if frequencies are given in radio velocity, convert to freqs
 			elif str(self.head["CTYPE3"]).strip().lower() == "vrad":
-				_, _, vels = self.wc.all_pix2world(int(self.im.shape[0] / 2), int(self.im.shape[1] / 2), range(nch), 0)
+				_, _, vels = self.wcs.all_pix2world(int(self.im.shape[0] / 2), int(self.im.shape[1] / 2), range(nch), 0)
 				if "RESTFREQ" in self.head.keys():
 					reffreq = self.head["RESTFREQ"] * 1e-9
 				elif "RESTFRQ" in self.head.keys():
@@ -177,6 +207,7 @@ class Cube:
 		self.__rms = value
 
 	rms = property(get_rms, set_rms)
+	"""Rms (root mean square) per channel."""
 
 	def deltavel(self, reffreq: float = None):
 		"""
@@ -217,10 +248,10 @@ class Cube:
 			py = self.im.shape[1] / 2
 		# otherwise convert radec to pixel coord
 		else:
-			if len(self.wc.axis_type_names) < 3:
-				px, py = self.wc.all_world2pix(ra, dec)
+			if len(self.wcs.axis_type_names) < 3:
+				px, py = self.wcs.all_world2pix(ra, dec)
 			else:
-				px, py, _ = self.wc.all_world2pix(ra, dec, self.freqs[0], 0)
+				px, py, _ = self.wcs.all_world2pix(ra, dec, self.freqs[0], 0)
 
 		# need integer indices
 		px = int(np.round(px))
@@ -240,10 +271,10 @@ class Cube:
 			px = self.im.shape[0] / 2
 			py = self.im.shape[1] / 2
 
-		if len(self.wc.axis_type_names) < 3:
-			ra, dec = self.wc.all_pix2world(px, py)
+		if len(self.wcs.axis_type_names) < 3:
+			ra, dec = self.wcs.all_pix2world(px, py)
 		else:
-			ra, dec, _ = self.wc.all_pix2world(px, py, self.freqs[0], 0)
+			ra, dec, _ = self.wcs.all_pix2world(px, py, self.freqs[0], 0)
 
 		return ra, dec
 
@@ -254,7 +285,7 @@ class Cube:
 		:return: Channel index.
 		"""
 
-		if len(self.wc.axis_type_names) < 3:
+		if len(self.wcs.axis_type_names) < 3:
 			raise ValueError("No frequency axis is present.")
 			return None
 
@@ -288,7 +319,7 @@ class Cube:
 		:return: Frequency in GHz.
 		"""
 
-		if len(self.wc.axis_type_names) < 3:
+		if len(self.wcs.axis_type_names) < 3:
 			raise ValueError("No frequency axis is present.")
 			return None
 
@@ -337,7 +368,7 @@ class Cube:
 		:param channel: Force extracton in a single channel of provided index (instead of the full cube).
 		:param freq: Frequency in GHz (alternative to channel).
 		:param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
-		:return: spec, err, npix: spectrum, error estimate and number of pixels in the aperture
+		:return: flux, err, npix: flux (spectrum), error estimate, and number of pixels in the aperture
 		"""
 
 		if px is None or py is None:
@@ -348,15 +379,15 @@ class Cube:
 		# take single pixel value if no aperture radius given
 		if radius <= 0:
 			self.log("Extracting single pixel spectrum.")
-			spec = self.im[px, py, :]
+			flux = self.im[px, py, :]
 			if calc_error:
 				err = np.array(self.rms[:])  # single pixel error is just rms
 			else:
-				err = np.full_like(spec, np.nan)
-			npix = np.ones(len(spec))
+				err = np.full_like(flux, np.nan)
+			npix = np.ones(len(flux))
 			# use just a single channel
 			if channel is not None:
-				spec = np.array([spec[channel]])
+				flux = np.array([flux[channel]])
 				npix = np.array([npix[channel]])
 				err = np.array([err[channel]])
 		else:
@@ -369,23 +400,23 @@ class Cube:
 
 			if channel is not None:
 				npix = np.array([np.sum(np.isfinite(self.im[:, :, channel][w]))])
-				spec = np.array([np.nansum(self.im[:, :, channel][w]) / self.beamvol[channel]])
+				flux = np.array([np.nansum(self.im[:, :, channel][w]) / self.beamvol[channel]])
 				if calc_error:
 					err = np.array(self.rms[channel] * np.sqrt(npix / self.beamvol[channel]))
 				else:
 					err = np.array([np.nan])
 			else:
-				spec = np.zeros(self.nch)
+				flux = np.zeros(self.nch)
 				npix = np.zeros(self.nch)
 				for i in range(self.nch):
-					spec[i] = np.nansum(self.im[:, :, i][w]) / self.beamvol[i]
+					flux[i] = np.nansum(self.im[:, :, i][w]) / self.beamvol[i]
 					npix[i] = np.sum(np.isfinite(self.im[:, :, i][w]))
 				if calc_error:
 					err = np.array(self.rms * np.sqrt(npix / self.beamvol))
 				else:
-					err = np.full_like(spec, np.nan)
+					err = np.full_like(flux, np.nan)
 
-		return spec, err, npix
+		return flux, err, npix
 
 	def single_pixel_value(self, ra: float = None, dec: float = None, freq: float = None,
 						   channel: int = None, calc_error: bool = False):
@@ -420,11 +451,11 @@ class Cube:
 		:return: value or (value, error)
 		"""
 
-		spec, err, _ = self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=channel, calc_error=calc_error)
+		flux, err, _ = self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=channel, calc_error=calc_error)
 		if calc_error:
-			return spec, err
+			return flux, err
 		else:
-			return spec
+			return flux
 
 	def growing_aperture(self, ra: float = None, dec: float = None, freq: float = None,
 						 maxradius=1.0, binspacing: float = None, bins: list = None,
@@ -559,9 +590,30 @@ class Cube:
 
 class MultiCube:
 	"""
-	A container like class to hold multiple cubes at the same time. Cubes are stored in a dictionary.
-	Example: mc = MultiCube("path_to_cube.image.fits") will load the cube, which is then accesible as mc["image"]
+	A container like object to hold multiple cubes at the same time. Cubes are stored in a dictionary.
+	Allows performing tasks such as residual scaled aperture integration or spectrum extraction.
+	Load another cube into MultiCube object by e.g. mc.load_cube("path_to_cube.residual.fits", "residual")
 
+	Example:
+		filename="cube.fits"
+		ra, dec, freq = (205.533741, 9.477317341, 222.54) # coord for the emission line
+		mc=MultiCube(filename) # will automatically try to load cube.xxx.fits, where xxx is
+								# residual, dirty, pb, model, psf, or image.pbcor
+
+		# Alternatively load each cube manually
+		# mc = MultiCube()
+		# mc.load_cube("somewhere/cube.fits", "image")
+		# mc.load_cube("elsewhere/cube.dirty.fits", "dirty")
+		# mc.load_cube("elsewhere/cube.residual.fits", "residual")
+		# mc.load_cube("elsewhere/cube.pb.fits", "pb")
+
+		# spectrum extracted from the circular aperture, with associated error, corrected for residual and PB response
+		flux, err, tab = mc.spectrum_corrected(ra=ra, dec=dec, radius=1.5, calc_error=True)
+		# tab.write("spectrum.txt", format="ascii.fixed_width", overwrite=True)  # Save results for later
+
+		# curve of growth up to the maximum radius, in steps of one pixel, in a chosen frequency channel
+		radius, flux, err, tab = mc.growing_aperture_corrected(ra=ra, dec=dec, freq=freq, maxradius=5, calc_error=True)
+		# tab.write("growth.txt", format="ascii.fixed_width", overwrite=True)  # Save results for later
 	"""
 
 	def __init__(self, filename: str = None, autoload_multi=True):
@@ -589,7 +641,7 @@ class MultiCube:
 		filenames = dict(zip(keylist, [None] * len(keylist)))
 		filenames["image"] = filename
 
-		# TODO could improve searching, but there are multiple naming conventions
+		# TODO could improve searching, but there are infinite number of ways people could name these files
 		# get the basename, which is hopefully shared between different cubes
 		extension = ".fits"
 		endings = [".image.tt0.fits", ".image.fits", ".fits"]
@@ -926,7 +978,7 @@ class MultiCube:
 
 		epsilon = flux_clean / (flux_dirty - flux_residual)
 		flux = np.array(epsilon * flux_dirty)
-		nbeam = npix / self["image"].beamvol
+		nbeam = npix / self["image"].beamvol[channel]
 
 		# apply PB correction if possible
 		if apply_pb_corr and "pb" in self.loaded_cubes:
