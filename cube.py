@@ -160,6 +160,7 @@ class Cube:
 		Calculate rms for each channel of the cube. Can take some time on large cubes.
 		:return: single rms value if 2D, array odf rms values for each channel if 3D cube
 		"""
+		# TODO: maybe add the option to calculate a single channel only?
 		if self.__rms is None:
 			# calc rms per channel
 			if self.nch > 1:
@@ -425,31 +426,31 @@ class Cube:
 		else:
 			return spec
 
-	def growing_aperture(self, ra: float = None, dec: float = None, maxradius=1.0,
-						 binspacing: float = None, bins: list = None,
-						 px: int = None, py: int = None, channel: int = 0, freq: float = None, profile=False) \
+	def growing_aperture(self, ra: float = None, dec: float = None, freq: float = None,
+						 maxradius=1.0, binspacing: float = None, bins: list = None,
+						 px: int = None, py: int = None, channel: int = 0,
+						 profile=False, calc_error=False) \
 			-> (np.ndarray, np.ndarray, np.ndarray, np.ndarray):
 		"""
 		Compute curve of growth at the given coordinate position in a circular aperture, growing up to the max radius.
 		Coordinates can be given in degrees (ra, dec) or pixels (px, py).
 		If no coordinates are given, the center of the map is assumed.
-		If no frequency or channel is given, the whole spectrum is returned.
+		If no channel is provided, the first one is assumed.
 		:param ra: Right ascention in degrees.
 		:param dec: Declination in degrees.
+		:param freq: Frequency in GHz, takes precedence over channel param.
 		:param maxradius: Max radius for aperture integration in arcsec.
 		:param binspacing: Resolution of the growth flux curve in arcsec, default is one pixel size.
 		:param bins: Custom bins for curve growth (1D np array).
-		:param px: Right ascention pixel coord.
-		:param py: Declination pixel coord.
-		:param channel: Index of the cube channel to take.
-		:param freq: Frequency in GHz, takes precedence over channel param.
+		:param px: Right ascention pixel coord (alternative to ra).
+		:param py: Declination pixel coord (alternative to dec).
+		:param channel: Index of the cube channel to take (alternative to freq).
 		:param profile: If True, compute azimuthally averaged profile, if False, compute cumulative aperture values
+		:param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
 		:return: radius, flux, err, npix - all 1D numpy arrays: aperture radius, cumulative flux within it,
 		associated Poissionain error (based on number of beams inside the aprture and the map rms), number of pixels
 		"""
 		self.log("Running growth_curve.")
-
-		# TODO: fix explanation when freq is not given
 
 		# get coordinates in pixels
 		if px is None or py is None:
@@ -485,12 +486,15 @@ class Cube:
 			# cumulative flux inside an aperture is the sum of all pixel values divided by the beam volume
 			flux = np.cumsum(flux) / self.beamvol[channel]
 
-		if profile:
-			# error on the mean
-			err = np.array(self.rms[channel] / np.sqrt(npix / self.beamvol))
+		if calc_error:
+			if profile:
+				# error on the mean
+				err = np.array(self.rms[channel] / np.sqrt(npix / self.beamvol))
+			else:
+				# error estimate assuming Poissonian statistics: rms x sqrt(number of independent beams inside aperture)
+				err = np.array(self.rms[channel] * np.sqrt(npix / self.beamvol[channel]))
 		else:
-			# error estimate assuming Poissonian statistics: rms x sqrt(number of independent beams inside aperture)
-			err = np.array(self.rms[channel] * np.sqrt(npix / self.beamvol[channel]))
+			err = np.full_like(flux, np.nan)
 
 		# centers of bins
 		radius = np.array(0.5 * (bins[1:] + bins[:-1]))
@@ -506,7 +510,7 @@ class Cube:
 		return radius, flux, err, npix
 
 	def aperture_r(self, ra: float = None, dec: float = None, freq: float = None,
-				   maxradius:float = 1.0, binspacing: float = None, bins: list = None):
+				   maxradius: float = 1.0, binspacing: float = None, bins: list = None):
 		"""
 		Obtain integrated flux within a circular aperture as a function of radius.
 		If freq is undefined, will return the spectrum of the 3D cube.
@@ -755,11 +759,12 @@ class MultiCube:
 
 		return True
 
-	def spectrum_corrected(self, ra: float = None, dec: float = None, radius=1.0,
-						   px: int = None, py: int = None, channel: int = None, freq: float = None,
-						   calc_error=True, sn_cut=2.5, apply_pb_corr=True):
+	def spectrum_corrected(self, ra: float = None, dec: float = None, freq: float = None, radius: float = 1.0,
+						   px: int = None, py: int = None, channel: int = None,
+						   calc_error=True, sn_cut: float = 2.5, apply_pb_corr=True):
 		"""
 		Extract aperture integrated spectrum from the cube using the residual scaling to account for the dirty beam.
+		Correction for the primary beam response is applied if avaliable.
 		Coordinates can be given in degrees (ra, dec) or pixels (px, py).
 		If no coordinates are given, the center of the map is assumed.
 
@@ -775,8 +780,8 @@ class MultiCube:
 		:param freq: Frequency in GHz. Extract only in a single channel instead of the full cube.
 		:param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
 		:param sn_cut: Use emission above this S/N threshold to estimate the clean-to-dirty beam ratio, need calc_error.
-		:param apply_pb_corr: Scale flux and error by the primary beam response, needs loaded pb map
-		:return: flux, err, tab - 1D array for corrected flux and error estimate; tab is a Table with all computations.
+		:param apply_pb_corr: Scale flux and error by the primary beam response (single pix value), needs loaded pb map.
+		:return: flux, err, tab: 1D array for corrected flux and error estimate; tab is a Table with all computations.
 		"""
 
 		# take single pixel value if no aperture radius given
@@ -808,7 +813,7 @@ class MultiCube:
 
 		# estimate a single epsilon across the full spectrum
 		# it is not expected to change a lot across channels (if PSF is consistent, and bandwidth is not too large)
-		epsilon_fix = np.nanmedian(epsilon)
+		epsilon_fix = float(np.nanmedian(epsilon))
 		if calc_error:
 			if channel is None:
 				rmses = self["image"].rms
@@ -851,6 +856,7 @@ class MultiCube:
 			channels = [channel]
 
 		freqs = self.freqs[channels]
+		nbeam = npix / self["image"].beamvol
 
 		tab = Table([channels,  # Channel index
 					 freqs,  # Frequency of the channel in GHz
@@ -862,18 +868,94 @@ class MultiCube:
 					 flux_residual,  # Aperture flux measured in the residual map (assumes clean beam)
 					 flux_clean,  # Aperture flux measured in the clean components map (= final - residual)
 					 npix,  # Number of pixels inside the aperture
+					 nbeam,  # Number of beams inside the aperture
 					 epsilon,  # Clean-to-dirty beam ratio in the channel
 					 rmses,  # Rms noise of the channel
 					 pb],  # Primary beam response (<=1) at the given coordinate, single pixel value
 					names=["channel", "freq", "flux", "err", "epsilon_fix",
 						   "flux_image", "flux_dirty", "flux_residual", "flux_clean",
-						   "npix", "epsilon", "rms", "pb"])
+						   "npix", "nbeam", "epsilon", "rms", "pb"])
 
 		return np.array(flux), np.array(err), tab
 
-	def growing_aperture_corrected(self, ra=None, dec=None, maxradius=1, binspacing=None, bins=None,
-								   channel=0, freq=None, profile=False):
+	def growing_aperture_corrected(self, ra: float = None, dec: float = None, freq: float = None,
+								   maxradius=1.0, binspacing: float = None, bins: list = None,
+								   px: int = None, py: int = None, channel: int = 0,
+								   calc_error=True, apply_pb_corr=True):
+		"""
+		Extract the curve of growth from the map using the residual scaling to account for the dirty beam.
+		Correction for the primary beam response is applied if avaliable.
+		Coordinates can be given in degrees (ra, dec) or pixels (px, py).
+		If no coordinates are given, the center of the map is assumed.
 
-		# TODO implement
+		For details on the method see appendix A in Novak et al. (2019):
+		https://ui.adsabs.harvard.edu/abs/2019ApJ...881...63N/abstract
 
-		return None
+		:param ra: Right ascention in degrees.
+		:param dec: Declination in degrees.
+		:param freq: Frequency in GHz.
+		:param maxradius: Max radius for aperture integration in arcsec.
+		:param binspacing: Resolution of the growth flux curve in arcsec, default is one pixel size.
+		:param bins: Custom bins for curve growth (1D np array).
+		:param px: Right ascention pixel coord (alternative to ra).
+		:param py: Declination pixel coord (alternative to dec).
+		:param channel: Index of the cube channel to take (alternative to freq). Default is the first channel.
+		:param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
+		:param apply_pb_corr: Scale flux and error by the primary beam response (single pix value), needs loaded pb map.
+		:return: radius, flux, err, tab:  1D array for radius[arcsec] and corrected flux and error estimate;
+		tab is a Table with all computations.
+		"""
+
+		# check and prepare cubes for residual scaling
+		if not self.__cubes_prepare():
+			raise ValueError("Cubes check failed!")
+
+		# define channel to use
+		if freq is not None:
+			channel = self["image"].freq2pix(freq)
+
+		# run growing aperture extraction on all cubes in a single channel
+		# the beam volume should be the same in all of them (checked by __cubes_prepare)
+		params = dict(ra=ra, dec=dec, maxradius=maxradius,
+					  px=px, py=py, channel=channel, freq=freq,
+					  binspacing=binspacing, bins=bins, profile=False)  # shared parameters
+		radius, flux_image, err, npix = self["image"].growing_aperture(calc_error=calc_error, **params)  # rms here only
+		_, flux_residual, _, _ = self["residual"].growing_aperture(calc_error=False, **params)
+		_, flux_dirty, _, _ = self["dirty"].growing_aperture(calc_error=False, **params)
+		flux_clean = flux_image - flux_residual
+
+		epsilon = flux_clean / (flux_dirty - flux_residual)
+		flux = np.array(epsilon * flux_dirty)
+		nbeam = npix / self["image"].beamvol
+
+		# apply PB correction if possible
+		if apply_pb_corr and "pb" in self.loaded_cubes:
+			self.log("Correcting flux and err for PB response.")
+			# will return a single pb value, because channel is set
+			pb, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq, calc_error=False)
+			pb = np.full(len(flux_image), pb)
+			flux = np.array(flux / pb)
+			err = np.array(err / pb)
+		elif apply_pb_corr and "pb" not in self.loaded_cubes:
+			self.log("Warning: Cannot correct for PB, missing pb map.")
+			pb = np.full(len(flux_image), np.nan)
+		else:
+			self.log("Flux is not PB corrected.")
+			pb = np.full(len(flux_image), np.nan)
+
+		tab = Table([radius,  # Aperture radius in arcsec.
+					 flux,  # Aperture flux corrected for residual
+					 err,  # Error estimate on the corrected flux
+					 flux_image,  # Aperture flux measured in the final map (assumes clean beam)
+					 flux_dirty,  # Aperture flux measured in the dirty map (assumes clean beam)
+					 flux_residual,  # Aperture flux measured in the residual map (assumes clean beam)
+					 flux_clean,  # Aperture flux measured in the clean components map (= final - residual)
+					 epsilon,  # Clean-to-dirty beam ratio for a given aperture size
+					 npix,  # Number of pixels inside the aperture
+					 nbeam,  # Number of beams inside the aperture: nbeam = npix / beamvol
+					 pb],  # Primary beam response (<=1) applied to flux and err columns, single value at all radii
+					names=["radius", "flux", "err",
+						   "flux_image", "flux_dirty", "flux_residual", "flux_clean",
+						   "epsilon", "npix", "nbeam", "pb"])
+
+		return radius, flux, err, tab
