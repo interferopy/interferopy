@@ -187,7 +187,7 @@ class Cube:
 
 	def get_rms(self):
 		"""
-		Calculate rms for each channel of the cube. Can take some time on large cubes.
+		Calculate rms for each channel of the cube. Can take some time to compute on large cubes.
 		:return: single rms value if 2D, array odf rms values for each channel if 3D cube
 		"""
 		# TODO: maybe add the option to calculate a single channel only?
@@ -713,14 +713,16 @@ class MultiCube:
 		return [k for k in self.cubes.keys() if self.cubes[k] is not None]
 
 	loaded_cubes = property(get_loaded_cubes)
+	"""List of keys corresponding to loaded cubes."""
 
 	def get_freqs(self):
 		if len(self.loaded_cubes) > 0:
-			return self[self.loaded_cubes[0]].freqs  # best to pick self["image"].freqs
+			return self[self.loaded_cubes[0]].freqs  # maybe pick explicitely self["image"].freqs
 		else:
 			raise ValueError("No cubes present!")
 
 	freqs = property(get_freqs)
+	"""Array of frequencies corresponding to cube channels (from the first loaded cube)."""
 
 	def log(self, text: str):
 		"""
