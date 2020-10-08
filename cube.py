@@ -520,10 +520,14 @@ class Cube:
 		if calc_error:
 			if profile:
 				# error on the mean
-				err = np.array(self.rms[channel] / np.sqrt(npix / self.beamvol))
+				nbeam = npix / self.beamvol[channel]
+				nbeam[nbeam < 1] = 1  # if there are less pixels than the beam size, better not count less than 1
+				err = np.array(self.rms[channel] / np.sqrt(nbeam))
 			else:
 				# error estimate assuming Poissonian statistics: rms x sqrt(number of independent beams inside aperture)
-				err = np.array(self.rms[channel] * np.sqrt(npix / self.beamvol[channel]))
+				nbeam = npix / self.beamvol[channel]
+				nbeam[nbeam < 1] = 1
+				err = np.array(self.rms[channel] * np.sqrt(nbeam))
 		else:
 			err = np.full_like(flux, np.nan)
 
@@ -541,27 +545,45 @@ class Cube:
 		return radius, flux, err, npix
 
 	def aperture_r(self, ra: float = None, dec: float = None, freq: float = None,
-				   maxradius: float = 1.0, binspacing: float = None, bins: list = None):
+				   px: int = None, py: int = None, channel: int = 0,
+				   maxradius: float = 1.0, binspacing: float = None, bins: list = None, calc_error: bool = False):
 		"""
 		Obtain integrated flux within a circular aperture as a function of radius.
 		If freq is undefined, will return the spectrum of the 3D cube.
 		Alias function. Check the "growing_aperture" method for details.
 		Units: ra[deg], dec[deg], maxradius[arcsec], binspacing[arcsec], freq[GHz]
-		:return: radius, flux, err, npix
+		:return: (radius, flux) or (radius, flux, err) if calc_error
 		"""
-		return self.growing_aperture(ra=ra, dec=dec, maxradius=maxradius, binspacing=binspacing,
-									 bins=bins, freq=freq, profile=False)
+
+		radius, flux, err, npix = self.growing_aperture(ra=ra, dec=dec, freq=freq,
+														maxradius=maxradius, binspacing=binspacing, bins=bins,
+														px=px, py=py, channel=channel,
+														profile=False, calc_error=calc_error)
+		if calc_error:
+			return radius, flux, err
+		else:
+			return radius, flux
 
 	def profile_r(self, ra: float = None, dec: float = None, freq: float = None,
-				  maxradius: float = 1.0, binspacing: float = None, bins: list = None, channel: int = 0):
+				  px: int = None, py: int = None, channel: int = 0,
+				  maxradius: float = 1.0, binspacing: float = None, bins: list = None,
+				  calc_error: bool = False):
 		"""
 		Obtain azimuthaly averaged profile as a function of radius.
 		Alias function. Check the "growing_aperture" method for details.
 		Units: ra[deg], dec[deg], maxradius[arcsec], binspacing[arcsec], freq[GHz]
-		:return: radius, flux, err, npix
+		:return: (radius, profile) or (radius, profile err) if calc_error
 		"""
-		return self.growing_aperture(ra=ra, dec=dec, maxradius=maxradius, binspacing=binspacing,
-									 bins=bins, channel=channel, freq=freq, profile=True)
+		radius, profile, err, npix = self.growing_aperture(ra=ra, dec=dec, freq=freq,
+														maxradius=maxradius, binspacing=binspacing, bins=bins,
+														px=px, py=py, channel=channel,
+														profile=True, calc_error=calc_error)
+		if calc_error:
+			return radius, profile, err
+		else:
+			return radius, profile
+
+		return
 
 	def save_fitsfile(self, filename: str = None, overwrite=False):
 		"""
