@@ -1,7 +1,7 @@
 """
 Examples of interferopy package usage.
 
-From quick look plots, over technical data assesment plots, to paper grade plots.
+From quick look plots, over technical data assessment plots, to paper grade plots.
 
 Author: Mladen Novak, 2020
 """
