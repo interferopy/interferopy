@@ -1,4 +1,15 @@
+"""
+Examples of interferopy package usage.
+
+From quick look plots, over technical data assesment plots, to paper grade plots.
+
+Author: Mladen Novak, 2020
+"""
+
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import ImageGrid
+from matplotlib.patches import Ellipse
+import matplotlib.patheffects as pe
 from scipy.optimize import curve_fit
 import numpy as np
 from astropy.table import Table
@@ -7,9 +18,7 @@ import astropy.units as u
 from interferopy.cube import Cube, MultiCube
 import interferopy.tools as iftools
 
-
 # TODO: add outdir when all plots look good
-
 
 def spectrum_single_pixel():
 	"""
@@ -44,13 +53,14 @@ def spectrum_aperture():
 	scale = 1e3  # map units are Jy/beam, will use to scale fluxes to mJy
 
 	cub = Cube(filename)
-	aper=1.3
+	aper = 1.3
 	flux, err = cub.aperture_value(ra=ra, dec=dec, radius=aper, calc_error=True)
 	# flux, err _ = cub.spectrum(ra=ra, dec=dec, radius=1.3, calc_error=True)  # alternatively
 
 	fig, ax = plt.subplots(figsize=(4.8, 3))
 	ax.set_title("Integrated aperture spectrum")
-	ax.plot(cub.freqs, flux * scale, color="black", drawstyle='steps-mid', lw=0.75, label="Spectrum within r="+str(aper)+'"')
+	ax.plot(cub.freqs, flux * scale, color="black", drawstyle='steps-mid', lw=0.75,
+			label="Spectrum within r=" + str(aper) + '"')
 	ax.fill_between(cub.freqs, flux * scale, 0, color="skyblue", step='mid', lw=0, alpha=0.3)
 	ax.plot(cub.freqs, err * scale, color="gray", ls=":", label=r"1$\sigma$ error")  # 1sigma error
 	ax.tick_params(direction='in', which="both")
@@ -289,10 +299,11 @@ def growing_aperture_technical():
 	ax.plot(radius, flux * scale, color="firebrick", lw=2, label="Corrected")
 	ax.fill_between(radius, (flux - err) * scale, (flux + err) * scale, color="firebrick", lw=0, alpha=0.2)
 
-	ax.plot(radius, tab["flux_dirty"]*scale, label="Dirty", color="black", ls=":")
-	ax.plot(radius, tab["flux_clean"]*scale, label="Cleaned components only", ls="-.", color="navy")
-	ax.plot(radius, tab["flux_residual"]*scale, label="Residual", ls="--", color="orange")
-	ax.plot(radius, tab["flux_image"]*scale, label="Uncorrected: clean + residual", dashes=[10, 3], color="forestgreen")
+	ax.plot(radius, tab["flux_dirty"] * scale, label="Dirty", color="black", ls=":")
+	ax.plot(radius, tab["flux_clean"] * scale, label="Cleaned components only", ls="-.", color="navy")
+	ax.plot(radius, tab["flux_residual"] * scale, label="Residual", ls="--", color="orange")
+	ax.plot(radius, tab["flux_image"] * scale, label="Uncorrected: clean + residual", dashes=[10, 3],
+			color="forestgreen")
 	ax.plot(radius, tab["epsilon"], color="gray", label="Clean-to-dirty beam ratio")
 	ax.axhline(0, color="gray", lw=0.5, ls=":")
 
@@ -300,7 +311,7 @@ def growing_aperture_technical():
 	ax.set_xlabel("Radius (arcsec)")
 	ax.set_ylabel("Cumulative flux density (mJy)")
 	ax.tick_params(direction='in', which="both")
-	ax.set_xlim(0,3)
+	ax.set_xlim(0, 3)
 
 	ax.legend(bbox_to_anchor=(1, 0.8))
 
@@ -327,7 +338,7 @@ def growing_aperture_paper():
 	fig, ax = plt.subplots(figsize=(4.8, 3))
 	ax.plot(radius, flux * scale, color="firebrick", lw=2, label="Corrected")
 	ax.fill_between(radius, (flux - err) * scale, (flux + err) * scale, color="firebrick", lw=0, alpha=0.2)
-	ax.plot(radius, tab["flux_image"]*scale, label="Uncorrected", ls="--", color="gray")
+	ax.plot(radius, tab["flux_image"] * scale, label="Uncorrected", ls="--", color="gray")
 
 	ax.axvline(aper_rad, color="gray", lw=0.75, ls=":", label="Chosen aperture size")
 
@@ -337,7 +348,7 @@ def growing_aperture_paper():
 	ax.tick_params(direction='in', which="both")
 	ax.set_xlabel("Aperture radius (arcsec)")
 	ax.set_ylabel("Line flux density (Jy km/s)")
-	ax.set_xlim(0,3)
+	ax.set_xlim(0, 3)
 	ax.legend(loc="lower right", frameon=False)
 
 	# add physical distances scale
@@ -352,6 +363,285 @@ def growing_aperture_paper():
 	plt.show()
 
 
+def map_single_paper():
+	"""
+	Plot a single 2D map with contours, synthesised beam, colorbar, and text overlay.
+	"""
+	filename = "./data/Pisco.cii.455kms.image.fits"
+	ra, dec = (205.533741, 9.477317341)  # we know where the source is
+	cutout = 3  # radius of the cutout in arcsec (full panel is 2xcutout)
+	aper_rad = 1.3
+	titletext = r"[CII] 158 $\mu$m"
+
+	cub = Cube(filename)  # load map
+
+	scale = 1e3  # Jy/beam to mJy/beam
+	# scale = cub.deltavel()  # use this to scale units to Jy/beam km/s
+
+	fig = plt.figure(figsize=(3, 3))  # nrows_ncols=(2,4)
+
+	# Use the ImageGrid to display a map and a colorbar to the right
+	grid = ImageGrid(fig, 111, nrows_ncols=(1, 1), axes_pad=0.05, share_all=True,
+					 cbar_location="right", cbar_mode="single", cbar_size="3%", cbar_pad=0.05)
+	ax = grid[0]
+
+	# create a smaller cutout for plotting, a subimage
+	# Note: there should be a better way to plot cutouts, but this works.
+	px, py = cub.radec2pix(ra, dec)
+	r = int(np.round(cutout * 1.05 / cub.pixsize))  # slightly larger cutout than required for edge bleeding
+	edgera, edgedec = cub.pix2radec([px - r, px + r], [py - r, py + r])  # coordinates of the two opposite corners
+	extent = [(edgera - ra) * 3600, (edgedec - dec) * 3600]
+	extent = extent[0].tolist() + extent[1].tolist()  # concat two lists
+
+	# get the cutout; warning: no index out of bounds checking is done here
+	subim = cub.im[px - r:px + r + 1, py - r:py + r + 1, 0] * scale  # scale units
+
+	# for color scaling
+	vmax = np.nanmax(subim)
+	vmin = -0.1 * vmax
+
+	# show image
+	axim = ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=vmin, vmax=vmax, extent=extent)
+
+	# calc rms and plot contours
+	rms = cub.rms[0] * scale
+	ax.contour(subim.T, extent=extent, colors="gray", levels=np.array([-8, -4, -2]) * rms, zorder=1, linewidths=0.5,
+			   linestyles="--")
+	ax.contour(subim.T, extent=extent, colors="black", levels=np.array([2, 4, 8, 16, 32]) * rms, zorder=1,
+			   linewidths=0.5,
+			   linestyles="-")
+
+	# add beam, angle is between north celestial pole and major axis, angle increases toward increasing RA
+	ellipse = Ellipse(xy=(cutout * 0.8, -cutout * 0.8),
+					  width=cub.beam["bmin"], height=cub.beam["bmaj"], angle=-cub.beam["bpa"],
+					  edgecolor='black', fc='w', lw=0.75)
+	ax.add_patch(ellipse)
+
+	# set limits to exact cutout size
+	ax.set_xlim(cutout, -cutout)
+	ax.set_ylim(-cutout, cutout)
+
+	# add circular aperture
+	ellipse = Ellipse(xy=(0, 0), width=2 * aper_rad, height=2 * aper_rad, angle=0,
+					  edgecolor='white', fc="none", lw=1, ls=":")
+	ax.add_patch(ellipse)
+
+	# add text on top of the map
+	ax.text(0.5, 0.95, titletext,
+			path_effects=[pe.Stroke(linewidth=2, foreground='k'), pe.Normal()],
+			va='top', ha='center', color="white", transform=ax.transAxes)
+
+	# add colorbar
+	cb = ax.cax.colorbar(axim)
+	cb.set_label_text(r"$S_\nu$ (mJy beam$^{-1}$)")
+
+	# ax.tick_params(direction='in', which="both")
+	ax.set_xlabel(r"$\Delta$ RA (arcsec)")
+	ax.set_ylabel(r"$\Delta$ Dec (arcsec)")
+
+	plt.savefig("./plots/map_single_paper.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
+	plt.show()
+
+
+def map_channels_paper():
+	"""
+	Plot a channel maps from the cube.
+	"""
+	filename = "./data/Pisco.cube.50kms.image.fits"
+	ra, dec, freq = (205.533741, 9.477317341, 222.547)  # we know where the source is
+	cutout = 1.5  # arcsec
+	scale = 1e3  # Jy/beam to mJy/beam
+
+	# set up the channel map grid (change the figure size if necessary for font scaling)
+	nrows = 3
+	ncols = 3
+	idx_center = int(0.5 * nrows * ncols)
+	figsize = (6, 6)
+
+	cub = Cube(filename)  # load map
+
+	ch_peak = cub.freq2pix(freq)  # referent channel in the cube - one with the peak line emission
+
+	# velocity offset of each channel from the referent frequency
+	# velocities = cub.vels(freq)  # use the frequency from the spectral fit
+	velocities = cub.vels(cub.freqs[ch_peak])  # it's nicer if the ch_peak velocity is set to exactly 0 km/s.
+
+	fig = plt.figure(figsize=figsize)
+	grid = ImageGrid(fig, 111, nrows_ncols=(nrows, ncols), axes_pad=0.05, share_all=True,
+					 cbar_location="right", cbar_mode="single", cbar_size="3%", cbar_pad=0.05)
+
+	# get the extent of the cutouts
+	px, py = cub.radec2pix(ra, dec)
+	r = int(np.round(cutout * 1.05 / cub.pixsize))  # slightly larger cutout than required for edge bleeding
+	edgera, edgedec = cub.pix2radec([px - r, px + r], [py - r, py + r])  # coordinates of the two opposite corners
+	extent = [(edgera - ra) * 3600, (edgedec - dec) * 3600]
+	extent = extent[0].tolist() + extent[1].tolist()  # concat two lists
+
+	# use the reference channel to set the colorbar scale
+	# vmax = np.nanmax(cub.im[px - r:px + r + 1, py - r:py + r + 1, ch_peak]) * scale
+	# or use a range of channels to find the max value for colorbar scaling:
+	vmax = np.nanmax(cub.im[px - r:px + r + 1, py - r:py + r + 1,
+					 ch_peak - idx_center:ch_peak - idx_center + nrows * ncols]) * scale
+	vmin = -0.1 * vmax
+
+	for i in range(nrows * ncols):
+		ax = grid[i]
+		ch = ch_peak - idx_center + i
+		subim = cub.im[px - r:px + r + 1, py - r:py + r + 1, ch] * scale  # scale units
+		# for color scaling
+		ax.tick_params(direction='in', which="both")
+		# set limits to exact cutout size
+		ax.set_xlim(cutout, -cutout)
+		ax.set_ylim(-cutout, cutout)
+
+		# show image
+		axim = ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=vmin, vmax=vmax, extent=extent)
+
+		# set limits to exact cutout size
+		ax.set_xlim(cutout, -cutout)
+		ax.set_ylim(-cutout, cutout)
+
+		# calc rms and plot contours
+		rms = cub.rms[ch] * scale
+		ax.contour(subim.T, extent=extent, colors="gray", levels=np.array([-8, -4, -2]) * rms, zorder=1,
+				   linewidths=0.5, linestyles="--")
+		ax.contour(subim.T, extent=extent, colors="black", levels=np.array([2, 4, 8, 16, 32]) * rms, zorder=1,
+				   linewidths=0.5, linestyles="-")
+
+		# add beam, angle is between north celestial pole and major axis, angle increases toward increasing RA
+		ellipse = Ellipse(xy=(cutout * 0.8, -cutout * 0.8),
+						  width=cub.beam["bmin"][ch], height=cub.beam["bmaj"][ch], angle=-cub.beam["bpa"][ch],
+						  edgecolor='black', fc='w', lw=0.75)
+		ax.add_patch(ellipse)
+
+		# add circular aperture
+		# aper_rad = 1.3
+		# ellipse = Ellipse(xy=(0, 0), width=2 * aper_rad, height=2 * aper_rad, angle=0,
+		# 				  edgecolor='white', fc="none", lw=0.5, ls=":")
+		# ax.add_patch(ellipse)
+
+		# add text on top of the map
+		# paneltext = str(cub.freqs[ch])
+		paneltext = str(int(velocities[ch])) + " km/s"
+		ax.text(0.5, 0.95, paneltext,
+				path_effects=[pe.Stroke(linewidth=3, foreground='k'), pe.Normal()],
+				va='top', ha='center', color="white", transform=ax.transAxes)
+
+		# Could put global labels to the figure, but in this case just put labels to the middle edge panels
+		if i == (ncols * int(nrows / 2)):
+			ax.set_ylabel(r"$\Delta$ Dec (arcsec)")
+		if i == (nrows * ncols - int(ncols / 2) - 1):
+			ax.set_xlabel(r"$\Delta$ RA (arcsec)")
+
+	# add colorbar
+	cb = ax.cax.colorbar(axim)
+	cb.set_label_text(r"$S_\nu$ (mJy beam$^{-1}$)")
+
+	plt.savefig("./plots/map_channels_paper.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
+	plt.show()
+
+	return None
+
+
+def map_technical():
+	"""
+	Plot several maps generated in the cleaning process (CASA tclean outputs).
+	"""
+	filename = "./data/Pisco.cii.455kms.image.fits"
+	ra, dec, freq = (205.533741, 9.477317341, 222.547)  # we know where the source is
+	cutout = 2.5  # arcsec, check that it is smaller than the image!
+	# scale = 1e3  # Jy/beam to mJy/beam
+
+	ch = 0  # channel to plot (for simple 2D maps, the first channel is the only channel)
+
+	mcub = MultiCube(filename)
+	mcub.make_clean_comp() # generate clean component map
+
+	fig, axes = plt.subplots(figsize=(6, 4), nrows=2, ncols=3, sharex=True, sharey=True)
+
+	# fig = plt.figure(figsize=figsize)
+	# grid = ImageGrid(fig, 111, nrows_ncols=(nrows, ncols), axes_pad=0.05, share_all=True,
+	# 				 cbar_location="right", cbar_mode="single", cbar_size="3%", cbar_pad=0.05)
+
+	# save a reference to the main image for easier use
+	cub = mcub["image"]
+	# get the extent of the cutouts
+	px, py = cub.radec2pix()  # do not give coordinates, take the central pixel
+	r = int(np.round(cutout * 1.05 / cub.pixsize))  # slightly larger cutout than required for edge bleeding
+	edgera, edgedec = cub.pix2radec([px - r, px + r], [py - r, py + r])  # coordinates of the two opposite corners
+	ra, dec = cub.pix2radec(px,py)
+	extent = [(edgera - ra) * 3600, (edgedec - dec) * 3600]
+	extent = extent[0].tolist() + extent[1].tolist()  # concat two lists
+
+	# Image map
+	ax=axes[0,0]
+	subim = mcub["image"].im[px - r:px + r + 1, py - r:py + r + 1, ch]  # scale units
+	vmax = np.nanmax(subim)
+	vmin = -0.1 * vmax
+	ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=vmin, vmax=vmax, extent=extent)
+	ax.set_title("Cleaned")
+
+	# set limits to exact cutout size
+	ax.set_xlim(cutout, -cutout)
+	ax.set_ylim(-cutout, cutout)
+
+	# calc rms and plot contours
+	# rms = mcub["image"].rms[ch]
+	# ax.contour(subim.T, extent=extent, colors="gray", levels=np.array([-8, -4, -2]) * rms, zorder=1,
+	# 		   linewidths=0.5, linestyles="--")
+	# ax.contour(subim.T, extent=extent, colors="black", levels=np.array([2, 4, 8, 16, 32]) * rms, zorder=1,
+	# 		   linewidths=0.5, linestyles="-")
+
+	# add beam, angle is between north celestial pole and major axis, angle increases toward increasing RA
+	ellipse = Ellipse(xy=(cutout * 0.8, -cutout * 0.8),
+					  width=cub.beam["bmin"], height=cub.beam["bmaj"], angle=-cub.beam["bpa"],
+					  edgecolor='black', fc='w', lw=0.75)
+	ax.add_patch(ellipse)
+
+	# Dirty map
+	ax=axes[0,1]
+	subim = mcub["dirty"].im[px - r:px + r + 1, py - r:py + r + 1, ch]
+	ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=vmin, vmax=vmax, extent=extent)
+	ax.set_title("Dirty")
+
+	# Residual map
+	ax=axes[0,2]
+	subim = mcub["residual"].im[px - r:px + r + 1, py - r:py + r + 1, ch]
+	ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=vmin, vmax=vmax, extent=extent)
+	ax.set_title("Residual")
+
+	# Clean components map
+	ax=axes[1,0]
+	subim = mcub["clean.comp"].im[px - r:px + r + 1, py - r:py + r + 1, ch]
+	ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=vmin, vmax=vmax, extent=extent)
+	ax.set_title("Clean component")
+
+	# model
+	ax=axes[1,1]
+	subim = mcub["model"].im[px - r:px + r + 1, py - r:py + r + 1, ch]
+	# model has units of Jy/pixel so generate different maximums here
+	vmax = np.nanmax(subim)
+	vmin = -0.1 * vmax
+	ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=vmin, vmax=vmax, extent=extent)
+	ax.set_title("Model")
+
+	# PSF
+	ax=axes[1,2]
+	subim = mcub["psf"].im[px - r:px + r + 1, py - r:py + r + 1, ch]
+	ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=-0.05, vmax=0.5, extent=extent)
+	ax.set_title("PSF")
+
+	# PB
+	# Not needed for targeted obs where the source is in the phase center (PB = 1)
+	ax=axes[1,2]
+	# subim = mcub["pb"].im[px - r:px + r + 1, py - r:py + r + 1, ch]
+	# ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=0.95, vmax=1, extent=extent)
+	# ax.set_title("PB")
+
+	plt.savefig("./plots/map_technical.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
+	plt.show()
+
+
 def main():
 	spectrum_single_pixel()
 	spectrum_aperture()
@@ -363,6 +653,11 @@ def main():
 	growing_aperture_technical()
 	growing_aperture_paper()
 
+	map_technical()
+	map_single_paper()
+	map_channels_paper()
+
+	# TODO misc scripts?
 
 
 if __name__ == "__main__":
