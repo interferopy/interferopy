@@ -233,12 +233,13 @@ class Cube:
 
 		return const.c / 1000 * (1 - self.freqs / reffreq)
 
-	def radec2pix(self, ra: float = None, dec: float = None):
+	def radec2pix(self, ra=None, dec=None, integer=True):
 		"""
 		Convert ra and dec coordinates into pixels to be used as im[px, py].
 		If no coords are given, the center of the map is assumed.
-		:param ra: Right ascention in degrees.
-		:param dec: Declination in degrees.
+		:param ra: Right ascention in degrees. Or list.
+		:param dec: Declination in degrees. Or list.
+		:param integer: Round the coordinate to an integer value (to be used as indices).
 		:return: Coords x and y in pixels (0 based index).
 		"""
 
@@ -254,17 +255,18 @@ class Cube:
 				px, py, _ = self.wcs.all_world2pix(ra, dec, self.freqs[0], 0)
 
 		# need integer indices
-		px = int(np.round(px))
-		py = int(np.round(py))
+		if integer:
+			px = np.asarray(np.round(px), dtype=int)
+			py = np.asarray(np.round(py), dtype=int)
 
 		return px, py
 
-	def pix2radec(self, px: float = None, py: float = None):
+	def pix2radec(self, px=None, py=None):
 		"""
 		Convert pixels coordinates into ra and dec.
 		If no coords are given, the center of the map is assumed.
-		:param px: X-axis index.
-		:param py: Y-axis index.
+		:param px: X-axis index. Or list.
+		:param py: Y-axis index. Or list.
 		:return: Coords ra, dec in degrees
 		"""
 		if px is None or py is None:
