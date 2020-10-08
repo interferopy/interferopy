@@ -440,3 +440,14 @@ def sex2deg(ra_hms, dec_dms, frame='icrs'):
 		return ra_deg[0], dec_deg[0]
 	else:
 		return ra_deg, dec_deg
+
+
+def arcsec2kpc(z: float = 0):
+	"""
+	Return the number of kiloparsecs contained in one arcsecond at given redshift.
+	Use concordance cosmology.
+	:param z: Redshift of the source
+	:return:
+	"""
+	cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
+	return 1. / cosmo.arcsec_per_kpc_proper(z).value
