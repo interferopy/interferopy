@@ -455,16 +455,16 @@ def map_channels_paper():
 	# set up the channel map grid (change the figure size if necessary for font scaling)
 	nrows = 3
 	ncols = 3
-	idx_center = int(0.5 * nrows * ncols)
 	figsize = (6, 6)
+	idx_center = int(0.5 * nrows * ncols)  # index of the central panel
 
 	cub = Cube(filename)  # load map
 
 	ch_peak = cub.freq2pix(freq)  # referent channel in the cube - one with the peak line emission
 
 	# velocity offset of each channel from the referent frequency
-	# velocities = cub.vels(freq)  # use the frequency from the spectral fit
-	velocities = cub.vels(cub.freqs[ch_peak])  # it's nicer if the ch_peak velocity is set to exactly 0 km/s.
+	velocities = cub.vels(freq)  # use the frequency from the spectral fit
+	# velocities = cub.vels(cub.freqs[ch_peak])  # it's nicer if the ch_peak velocity is set to exactly 0 km/s.
 
 	fig = plt.figure(figsize=figsize)
 	grid = ImageGrid(fig, 111, nrows_ncols=(nrows, ncols), axes_pad=0.05, share_all=True,
@@ -472,7 +472,7 @@ def map_channels_paper():
 
 	# get the extent of the cutouts
 	px, py = cub.radec2pix(ra, dec)
-	r = int(np.round(cutout * 1.05 / cub.pixsize))  # slightly larger cutout than required for edge bleeding
+	r = int(np.round(cutout * 1.05 / cub.pixsize))  # slightly larger cutout than required, for edge bleeding
 	edgera, edgedec = cub.pix2radec([px - r, px + r], [py - r, py + r])  # coordinates of the two opposite corners
 	extent = [(edgera - ra) * 3600, (edgedec - dec) * 3600]
 	extent = extent[0].tolist() + extent[1].tolist()  # concat two lists
@@ -486,13 +486,8 @@ def map_channels_paper():
 
 	for i in range(nrows * ncols):
 		ax = grid[i]
-		ch = ch_peak - idx_center + i
+		ch = ch_peak - idx_center + i  # this will put the peak channel on i = idx_center position
 		subim = cub.im[px - r:px + r + 1, py - r:py + r + 1, ch] * scale  # scale units
-		# for color scaling
-		ax.tick_params(direction='in', which="both")
-		# set limits to exact cutout size
-		ax.set_xlim(cutout, -cutout)
-		ax.set_ylim(-cutout, cutout)
 
 		# show image
 		axim = ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=vmin, vmax=vmax, extent=extent)
@@ -526,6 +521,8 @@ def map_channels_paper():
 		ax.text(0.5, 0.95, paneltext,
 				path_effects=[pe.Stroke(linewidth=3, foreground='k'), pe.Normal()],
 				va='top', ha='center', color="white", transform=ax.transAxes)
+
+		ax.tick_params(direction='in', which="both")
 
 		# Could put global labels to the figure, but in this case just put labels to the middle edge panels
 		if i == (ncols * int(nrows / 2)):
@@ -613,6 +610,8 @@ def map_technical():
 	# Clean components map
 	ax=axes[1,0]
 	subim = mcub["clean.comp"].im[px - r:px + r + 1, py - r:py + r + 1, ch]
+	# Used generated map "clean.comp", alternatively, plot the difference directly
+	# subim = (mcub["image"].im - mcub["residual"].im)[px - r:px + r + 1, py - r:py + r + 1, ch]
 	ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=vmin, vmax=vmax, extent=extent)
 	ax.set_title("Clean component")
 
@@ -656,9 +655,6 @@ def main():
 	map_technical()
 	map_single_paper()
 	map_channels_paper()
-
-	# TODO misc scripts?
-
 
 if __name__ == "__main__":
 	main()
