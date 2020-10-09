@@ -18,6 +18,7 @@ import astropy.units as u
 from interferopy.cube import Cube, MultiCube
 import interferopy.tools as iftools
 
+
 # TODO: add outdir when all plots look good
 
 def spectrum_single_pixel():
@@ -40,7 +41,10 @@ def spectrum_single_pixel():
 	ax.set_xlabel("Frequency (GHz)")
 	ax.set_ylabel("Flux density (mJy / beam)")
 	ax.legend(frameon=False)
+
 	plt.savefig("./plots/spectrum_single_pixel.pdf", bbox_inches="tight")  # save plot
+	plt.savefig("./thumbnails/spectrum_single_pixel.png", bbox_inches="tight", dpi=72)  # web raster version
+
 	plt.show()
 
 
@@ -67,7 +71,10 @@ def spectrum_aperture():
 	ax.set_xlabel("Frequency (GHz)")
 	ax.set_ylabel("Aperture flux density (mJy)")
 	ax.legend(frameon=False)
+
 	plt.savefig("./plots/spectrum_aperture.pdf", bbox_inches="tight")  # save plot
+	plt.savefig("./thumbnails/spectrum_aperture.png", bbox_inches="tight", dpi=72)  # web raster version
+
 	plt.show()
 
 
@@ -97,15 +104,26 @@ def spectrum_aperture_paper():
 	integral_fit = amp * sigma_kms * np.sqrt(2 * np.pi)
 	integral_err = integral_fit * np.sqrt((sigma_err / sigma) ** 2 + (nu_err / nu) ** 2 + (amp_err / amp) ** 2)
 
-	print("Gaussian fit:")
-	print("Flux = " + str(iftools.sigfig(integral_fit, 2)) + " +- " + str(iftools.sigfig(integral_err, 1)) + " Jy.km/s")
-	print("FWHM = " + str(iftools.sigfig(fwhm_kms, 2)) + " +- " + str(iftools.sigfig(fwhm_err_kms, 1)) + " km/s")
-	print("Freq = " + str(iftools.sigfig(nu, 7)) + " +- " + str(iftools.sigfig(nu_err, 1)) + " GHz")
+	txt = "[CII] Flux = " + str(iftools.sigfig(integral_fit, 2)) \
+		  + r" $\pm$ " + str(iftools.sigfig(integral_err, 1)) + " Jy km/s\n"\
+		  + "[CII] FWHM = " + str(iftools.sigfig(int(fwhm_kms), 2))\
+		  + r" $\pm$ " + str(iftools.sigfig(int(fwhm_err_kms), 1)) + " km/s\n"\
+		  + "Freq = " + str(iftools.sigfig(nu, 6)) \
+		  + r" $\pm$ " + str(iftools.sigfig(nu_err, 1)) + " GHz\n" \
+		  + "Continuum = " + str(iftools.sigfig(cont*scale, 2)) \
+		  + r" $\pm$ " + str(iftools.sigfig(cont_err*scale, 1)) + " mJy\n"
+
+	# print("Gaussian fit:")
+	# print("Flux = " + str(iftools.sigfig(integral_fit, 2)) + " +- " + str(iftools.sigfig(integral_err, 1)) + " Jy.km/s")
+	# print("FWHM = " + str(iftools.sigfig(fwhm_kms, 2)) + " +- " + str(iftools.sigfig(fwhm_err_kms, 1)) + " km/s")
+	# print("Freq = " + str(iftools.sigfig(nu, 7)) + " +- " + str(iftools.sigfig(nu_err, 1)) + " GHz")
 
 	# plot the spectrum, fill around the fitted continuum value
 	fig, ax = plt.subplots(figsize=(4.8, 3))
 	ax.plot(freqs, spectrum * scale, color="black", drawstyle='steps-mid', lw=0.75)
 	ax.fill_between(freqs, spectrum * scale, cont * scale, color="skyblue", step='mid', lw=0, alpha=0.3)
+
+	ax.text(0.98, 0.95, txt, va='top', ha='right',  transform=ax.transAxes)
 
 	# Plot the uncorrected specturum as well
 	# ax.plot(freqs, tab["flux_image"] * scale, color="black", drawstyle='steps-mid', lw=0.5, ls="--")
@@ -134,6 +152,8 @@ def spectrum_aperture_paper():
 	ax.axhline(0, color="gray", lw=0.5, ls=":")
 
 	plt.savefig("./plots/spectrum_aperture_paper.pdf", bbox_inches="tight")  # save plot
+	plt.savefig("./thumbnails/spectrum_aperture_paper.png", bbox_inches="tight", dpi=72)  # web raster version
+
 	plt.show()
 
 
@@ -186,10 +206,12 @@ def spectrum_aperture_technical():
 
 	ax2.tick_params(direction='in', which="both")
 	ax2.set_xlabel("Frequency (GHz)")
-	ax2.set_ylabel(r"Clean-to-dirty\nbeam ratio: $\epsilon$")
+	ax2.set_ylabel("Clean-to-dirty\nbeam ratio: "+r"$\epsilon$")
 	ax2.set_ylim(-1.5, 1.5)
 
 	plt.savefig("./plots/spectrum_aperture_technical.pdf", bbox_inches="tight")  # save plot
+	plt.savefig("./thumbnails/spectrum_aperture_technical.png", bbox_inches="tight", dpi=72)  # web raster version
+
 	plt.show()
 
 
@@ -237,6 +259,8 @@ def growing_aperture():
 	ax2.tick_params(axis='y', colors=col)
 
 	plt.savefig("./plots/growing_aperture.pdf", bbox_inches="tight")  # save plot
+	plt.savefig("./thumbnails/growing_aperture.png", bbox_inches="tight", dpi=72)  # web raster version
+
 	plt.show()
 
 
@@ -277,6 +301,8 @@ def growing_aperture_psf():
 	ax2.tick_params(axis='y', colors=col)
 
 	plt.savefig("./plots/growing_aperture_psf.pdf", bbox_inches="tight")  # save plot
+	plt.savefig("./thumbnails/growing_aperture_psf.png", bbox_inches="tight", dpi=72)  # web raster version
+
 	plt.show()
 
 
@@ -316,6 +342,8 @@ def growing_aperture_technical():
 	ax.legend(bbox_to_anchor=(1, 0.8))
 
 	plt.savefig("./plots/growing_aperture_technical.pdf", bbox_inches="tight")  # save plot
+	plt.savefig("./thumbnails/growing_aperture_technical.png", bbox_inches="tight", dpi=72)  # web raster version
+
 	plt.show()
 
 
@@ -344,6 +372,7 @@ def growing_aperture_paper():
 
 	# Could obtain just the single flux value at given aper_rad with
 	# flux, err, tab = mcub.spectrum_corrected(ra=ra, dec=dec, radius=aper_rad, calc_error=True)
+
 	# print(flux*scale,err*scale)
 	ax.tick_params(direction='in', which="both")
 	ax.set_xlabel("Aperture radius (arcsec)")
@@ -360,6 +389,8 @@ def growing_aperture_paper():
 	ax2.tick_params(direction='in', which="both")
 
 	plt.savefig("./plots/growing_aperture_paper.pdf", bbox_inches="tight")  # save plot
+	plt.savefig("./thumbnails/growing_aperture_paper.png", bbox_inches="tight", dpi=72)  # web raster version
+
 	plt.show()
 
 
@@ -440,6 +471,8 @@ def map_single_paper():
 	ax.set_ylabel(r"$\Delta$ Dec (arcsec)")
 
 	plt.savefig("./plots/map_single_paper.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
+	plt.savefig("./thumbnails/map_single_paper.png", bbox_inches="tight", dpi=72)  # web raster version
+
 	plt.show()
 
 
@@ -509,11 +542,12 @@ def map_channels_paper():
 						  edgecolor='black', fc='w', lw=0.75)
 		ax.add_patch(ellipse)
 
-		# add circular aperture
-		# aper_rad = 1.3
-		# ellipse = Ellipse(xy=(0, 0), width=2 * aper_rad, height=2 * aper_rad, angle=0,
-		# 				  edgecolor='white', fc="none", lw=0.5, ls=":")
-		# ax.add_patch(ellipse)
+		# add circular aperture to the central panel
+		if i == idx_center:
+			aper_rad = 1.3
+			ellipse = Ellipse(xy=(0, 0), width=2 * aper_rad, height=2 * aper_rad, angle=0,
+							  edgecolor='white', fc="none", lw=1, ls=":")
+			ax.add_patch(ellipse)
 
 		# add text on top of the map
 		# paneltext = str(cub.freqs[ch])
@@ -535,6 +569,8 @@ def map_channels_paper():
 	cb.set_label_text(r"$S_\nu$ (mJy beam$^{-1}$)")
 
 	plt.savefig("./plots/map_channels_paper.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
+	plt.savefig("./thumbnails/map_channels_paper.png", bbox_inches="tight", dpi=72)  # web raster version
+
 	plt.show()
 
 	return None
@@ -552,7 +588,7 @@ def map_technical():
 	ch = 0  # channel to plot (for simple 2D maps, the first channel is the only channel)
 
 	mcub = MultiCube(filename)
-	mcub.make_clean_comp() # generate clean component map
+	mcub.make_clean_comp()  # generate clean component map
 
 	fig, axes = plt.subplots(figsize=(6, 4), nrows=2, ncols=3, sharex=True, sharey=True)
 
@@ -566,12 +602,12 @@ def map_technical():
 	px, py = cub.radec2pix()  # do not give coordinates, take the central pixel
 	r = int(np.round(cutout * 1.05 / cub.pixsize))  # slightly larger cutout than required for edge bleeding
 	edgera, edgedec = cub.pix2radec([px - r, px + r], [py - r, py + r])  # coordinates of the two opposite corners
-	ra, dec = cub.pix2radec(px,py)
+	ra, dec = cub.pix2radec(px, py)
 	extent = [(edgera - ra) * 3600, (edgedec - dec) * 3600]
 	extent = extent[0].tolist() + extent[1].tolist()  # concat two lists
 
 	# Image map
-	ax=axes[0,0]
+	ax = axes[0, 0]
 	subim = mcub["image"].im[px - r:px + r + 1, py - r:py + r + 1, ch]  # scale units
 	vmax = np.nanmax(subim)
 	vmin = -0.1 * vmax
@@ -596,19 +632,19 @@ def map_technical():
 	ax.add_patch(ellipse)
 
 	# Dirty map
-	ax=axes[0,1]
+	ax = axes[0, 1]
 	subim = mcub["dirty"].im[px - r:px + r + 1, py - r:py + r + 1, ch]
 	ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=vmin, vmax=vmax, extent=extent)
 	ax.set_title("Dirty")
 
 	# Residual map
-	ax=axes[0,2]
+	ax = axes[0, 2]
 	subim = mcub["residual"].im[px - r:px + r + 1, py - r:py + r + 1, ch]
 	ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=vmin, vmax=vmax, extent=extent)
 	ax.set_title("Residual")
 
 	# Clean components map
-	ax=axes[1,0]
+	ax = axes[1, 0]
 	subim = mcub["clean.comp"].im[px - r:px + r + 1, py - r:py + r + 1, ch]
 	# Used generated map "clean.comp", alternatively, plot the difference directly
 	# subim = (mcub["image"].im - mcub["residual"].im)[px - r:px + r + 1, py - r:py + r + 1, ch]
@@ -616,7 +652,7 @@ def map_technical():
 	ax.set_title("Clean component")
 
 	# model
-	ax=axes[1,1]
+	ax = axes[1, 1]
 	subim = mcub["model"].im[px - r:px + r + 1, py - r:py + r + 1, ch]
 	# model has units of Jy/pixel so generate different maximums here
 	vmax = np.nanmax(subim)
@@ -625,36 +661,39 @@ def map_technical():
 	ax.set_title("Model")
 
 	# PSF
-	ax=axes[1,2]
+	ax = axes[1, 2]
 	subim = mcub["psf"].im[px - r:px + r + 1, py - r:py + r + 1, ch]
 	ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=-0.05, vmax=0.5, extent=extent)
 	ax.set_title("PSF")
 
 	# PB
 	# Not needed for targeted obs where the source is in the phase center (PB = 1)
-	ax=axes[1,2]
+	# ax = axes[1, 2]
 	# subim = mcub["pb"].im[px - r:px + r + 1, py - r:py + r + 1, ch]
 	# ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=0.95, vmax=1, extent=extent)
 	# ax.set_title("PB")
 
 	plt.savefig("./plots/map_technical.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
+	plt.savefig("./thumbnails/map_technical.png", bbox_inches="tight", dpi=72)  # web raster version
+
 	plt.show()
 
 
 def main():
-	spectrum_single_pixel()
-	spectrum_aperture()
-	spectrum_aperture_technical()
-	spectrum_aperture_paper()
+	# spectrum_single_pixel()
+	# spectrum_aperture()
+	# spectrum_aperture_technical()
+	# spectrum_aperture_paper()
 
-	growing_aperture()
-	growing_aperture_psf()
-	growing_aperture_technical()
+	# growing_aperture()
+	# growing_aperture_psf()
+	# growing_aperture_technical()
 	growing_aperture_paper()
+	#
+	# map_single_paper()
+	# map_channels_paper()
+	# map_technical()
 
-	map_technical()
-	map_single_paper()
-	map_channels_paper()
 
 if __name__ == "__main__":
 	main()
