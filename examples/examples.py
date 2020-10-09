@@ -19,8 +19,6 @@ from interferopy.cube import Cube, MultiCube
 import interferopy.tools as iftools
 
 
-# TODO: add outdir when all plots look good
-
 def spectrum_single_pixel():
 	"""
 	Extract the spectrum from the central pixel.
@@ -680,19 +678,19 @@ def map_technical():
 
 
 def main():
-	# spectrum_single_pixel()
-	# spectrum_aperture()
-	# spectrum_aperture_technical()
-	# spectrum_aperture_paper()
+	spectrum_single_pixel()
+	spectrum_aperture()
+	spectrum_aperture_technical()
+	spectrum_aperture_paper()
 
-	# growing_aperture()
-	# growing_aperture_psf()
-	# growing_aperture_technical()
+	growing_aperture()
+	growing_aperture_psf()
+	growing_aperture_technical()
 	growing_aperture_paper()
-	#
-	# map_single_paper()
-	# map_channels_paper()
-	# map_technical()
+
+	map_single_paper()
+	map_channels_paper()
+	map_technical()
 
 
 if __name__ == "__main__":
