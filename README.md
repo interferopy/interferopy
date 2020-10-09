@@ -116,7 +116,10 @@ Additionally, there are several methods used for dust continuum calculations: *b
 A method to compute the surface brightness temperature of radio observations: *surf_temp()*.
 A method to stack different positions in a single 2D map: *stack2d()*, and others.
 
-    
+### Miscellaneous
+
+Several specialized tasks and helper functions for data reduction in CASA are located in [casatools.py](casatools.py) and [casatools_vla_pipe.py](casatools_vla_pipe.py).
+
 ## Examples
 
 Usage of *Cube* and *MultiCube* classes, and their methods, are demonstrated on an ALMA dataset of a high-redshift quasar host galaxy J1342+0928, nicknamed **Pisco** for short. The galaxy host was observed across multiple ALMA bands between 100 and 400 GHz, targeting numerous atomic and molecular emission lines. The results and the method details are published in [Novak et al. (2019)](https://ui.adsabs.harvard.edu/abs/2019ApJ...881...63N/abstract) and [Bañados et al. (2019)](https://ui.adsabs.harvard.edu/abs/2019ApJ...881L..23B/abstract).
