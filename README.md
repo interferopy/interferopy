@@ -1,7 +1,7 @@
 
 # Interferopy
 
-A Python library of common tasks used in observational radio/mm interferometry data analysis. 
+A Python library of common tasks used in the observational radio/mm interferometry data analysis. 
 
 The package was developed to aid in the studies of the interstellar medium in high-redshift quasar host galaxies using emission lines, as well as to create publication quality plots.
 
