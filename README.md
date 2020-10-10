@@ -52,7 +52,7 @@ Extract aperture flux density with the *spectrum()* method, for example
 Omitting the coordinates assumes the central pixel position, which is useful for a quick look at the data, especially in targeted observations, where the source is usually in the phase center. Setting the radius to zero yields a single pixel spectrum. Additional convenience wrapper functions exist (derived from the *spectrum()* method).
 
     flux = cub.single_pixel_value()  # returns value(s) at the central pixel
-    flux = aperture_value(ra=ra, dec=dec, radius=0.5)  # integrated value(s) within a circular aperture of r=0.5"
+    flux = aperture_value(ra=ra, dec=dec, radius=0.5)  # integral within a circular aperture of r=0.5"
     flux, err = aperture_value(ra=ra, dec=dec, radius=0.5, calc_error=True)
     
 To find the best aperture size that encompasses the entire source, one can search for a saturation point in the curve of growth (cumulative flux density as a function of aperture radius). Obtain it with the *growing_aperture()* method.
@@ -60,7 +60,7 @@ This operates on a single channel only (must set the *freq* or the *channel* par
 
 
     r, flux, err, _ = cub.growing_aperture(ra=ra, dec=dec, freq=freq, maxradius=5, calc_error=True)
-    r, profile, err, _ = cub.growing_aperture(ra=ra, dec=dec, freq=freq, maxradius=5, calc_error=True, profile=True)
+    r, profile, err, _ = cub.growing_aperture(ra=ra, dec=dec, freq=freq, calc_error=True, profile=True)
     
 Again, convenience wrapper functions exist (derived from the *growing_aperture()* method).
 
@@ -92,7 +92,7 @@ Analogous to *spectrum()* and *growing_aperture()* methods available for a *Cube
 the *MultiCube* object has *spectrum_corrected()* and *growing_aperture_corrected()*. These methods perform aperture integration that takes into account the ill-defined hybrid units of the cleaned maps. They require loaded *image*, *residual*, and *dirty* cubes (best to have the *pb* cube as well). 
 
     flux, err, tab = mcub.spectrum_corrected(ra=ra, dec=dec, radius=1.5, calc_error=True)
-    r, flux, err, tab = mcub.growing_aperture_corrected(ra=ra, dec=dec, freq=freq, maxradius=5, calc_error=True)
+    r, flux, err, tab = mcub.growing_aperture_corrected(ra=ra, dec=dec, maxradius=5, calc_error=True)
 
 These methods perform both the residual scaling correction, and the primary beam correction (can be turned off with *apply_pb_corr=False*). The *tab* will contain a *Table* object with additional technical information, such as the aperture integrated values from individual cubes, the clean-to-dirty beam ratio, number of pixels or beams in the aperture, and so on.
 
