@@ -272,6 +272,10 @@ def dust_sobs(nu_obs, z, mass_dust, temp_dust, beta, cmb_contrast=True, cmb_heat
 def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, naxis=100, interpol=True):
 	"""
 	Perform median and mean (optionally rms weighted) stacking of multiple sources in a single radio map.
+	This function requires that the first index is the x coordinate, and the second one y.
+	If the map was opened with the fits package, it likely has to be transposed first with im.T.
+	Opening the map as interferopy.Cube object does this transposition automatically.
+
 	:param ras: List of right ascentions.
 	:param decs: List of declinations.
 	:param im: 2D radio map indexed as im[ra,dec].

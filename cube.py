@@ -37,7 +37,7 @@ class Cube:
 			"""Image header of the loaded fits file."""
 
 			self.im: np.ndarray = None
-			"""Data cube indexed as im[ra, dec, freq]."""
+			"""Data cube indexed as im[ra, dec, freq]. This is transposed version of what the fits package returns"""
 
 			self.wcs: wcs.WCS = None
 			"""Datacube world coordinate system."""
