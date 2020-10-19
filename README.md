@@ -42,7 +42,7 @@ Converting between pixel and celestial coordinates (usually equatorial coordinat
     cub.wcs  # world coordinate system object
     px, py = cub.radec2pix(ra, dec)  # pixel to ra/dec coordinates (degrees)
     ra, dec = cub.pix2radec(px, py)
-    ch = freq2pix(freq)  # pixel (channel) to frequency coordinates
+    ch = cub.freq2pix(freq)  # pixel (channel) to frequency coordinates
     freq = cub.pix2freq(ch)
 
 Extract aperture flux density with the *spectrum()* method, for example
@@ -52,8 +52,8 @@ Extract aperture flux density with the *spectrum()* method, for example
 Omitting the coordinates assumes the central pixel position, which is useful for a quick look at the data, especially in targeted observations, where the source is usually in the phase center. Setting the radius to zero yields a single pixel spectrum. Additional convenience wrapper functions exist (derived from the *spectrum()* method).
 
     flux = cub.single_pixel_value()  # returns value(s) at the central pixel
-    flux = aperture_value(ra=ra, dec=dec, radius=0.5)  # integral within a circular aperture of r=0.5"
-    flux, err = aperture_value(ra=ra, dec=dec, radius=0.5, calc_error=True)
+    flux = cub.aperture_value(ra=ra, dec=dec, radius=0.5)  # integral within a circular aperture of r=0.5"
+    flux, err = cub.aperture_value(ra=ra, dec=dec, radius=0.5, calc_error=True)
     
 To find the best aperture size that encompasses the entire source, one can search for a saturation point in the curve of growth (cumulative flux density as a function of aperture radius). Obtain it with the *growing_aperture()* method.
 This operates on a single channel only (must set the *freq* or the *channel* parameter). The same function implements the ability to compute azimuthally averaged radial profile.
