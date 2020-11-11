@@ -335,6 +335,18 @@ class Cube:
 
 		return self.freqs[pz]
 
+	def im2d(self, ch: int = 0):
+		"""
+		Get the 2D map. Convenience function to avoid indexing notation.
+		:param ch: Channel index.
+		:return: 2D numpy array.
+		"""
+		if ch < 0 or ch >= self.nch:
+			raise ValueError("Requested channel is outside of the available range.")
+			return None
+
+		return self.im[:, :, ch]
+
 	def distance_grid(self, px: float, py: float) -> np.ndarray:
 		"""
 		Grid of distances from the chosen pixel (can be subpixel accuracy).
