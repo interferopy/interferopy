@@ -206,7 +206,7 @@ def blackbody(nu, temp):
 	Planck's law for black body emission, per unit frequency.
 	:param nu: Rest frame frequency in Hz.
 	:param temp: Temperature in K.
-	:return:
+	:return: Emission in units of W / (m^2 Hz)
 	"""
 	return 2 * const.h * nu ** 3 / const.c ** 2 / (np.exp(const.h * nu / (const.k * temp)) - 1)
 
