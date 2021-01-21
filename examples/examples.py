@@ -4,6 +4,7 @@ Examples of interferopy package usage.
 From quick look plots, over technical data assessment plots, to paper grade plots.
 
 Author: Mladen Novak, 2020
+# Last Contribution: Romain Meyer, Jan 2021
 """
 
 import matplotlib.pyplot as plt
@@ -14,10 +15,12 @@ from scipy.optimize import curve_fit
 import numpy as np
 from astropy.table import Table
 import astropy.units as u
-
 from interferopy.cube import Cube, MultiCube
 import interferopy.tools as iftools
-
+# The three libraries below are only needed for wcsaxes plots
+from matplotlib import colors
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.axes as maxes
 
 def spectrum_single_pixel():
 	"""
@@ -677,7 +680,98 @@ def map_technical():
 	plt.show()
 
 
+def map_wcsaxes():
+	"""
+	Plot a map with wcsaxes and semi-logarithmic scaling. Scaling can be controlled to ensure consistency across several
+	plots. Prints fluxes of the central source.
+	"""
+
+	# Two parameters that control the scaling to ensure consistency across plots. If none, uses maximum of map and
+	# 5sigma rms noise aas threshold to go from linear to logarithmmic
+	vmax = None
+	linthres = None
+
+	filename = 	"./data/Pisco.cii.455kms.image.fits"
+	cub = Cube(filename)
+
+
+	# we know where the source is
+	cutout = 4  # radius of the cutout in arcsec (full panel is 2xcutout)
+	cutout_pix = cutout/cub.pixsize # DEC radius of cutout in arcsec
+	aper_rad = 2
+
+
+	scale = 1e3  # Jy/beam to mJy/beam
+
+	fig = plt.figure(figsize=(3, 3))
+
+	# Use the ImageGrid to display a map and a colorbar to the right
+	ax = plt.subplot(projection=cub.wcs, label='overlays',slices=('x', 'y',200))
+	lon = ax.coords[0]
+	lat = ax.coords[1]
+
+	# for color scaling
+	if vmax == None:
+		vmax = np.nanmax(cub.im[:,:,0]*scale)
+		linthres = 5*np.std(cub.im[:,:,0].T*scale)
+
+	# show image
+	axim = ax.imshow(cub.im[:,:,0].T*scale,origin='lower',  cmap="PuOr_r", vmin=-vmax, vmax=vmax,zorder=-1,
+				   norm=colors.SymLogNorm(linthresh=linthres,
+										  linscale=0.5,
+										  vmin=-vmax, vmax=vmax))
+
+	# calc rms and plot contours
+	rms = cub.rms[0] * scale
+
+	ax.contour(cub.im[:,:,0].T*scale, colors="gray", levels=np.array([-8, -4, -2]) * rms, zorder=1,
+			 linewidths=0.5, linestyles="--")
+	ax.contour(cub.im[:,:,0].T*scale, colors="black", levels=np.array([2, 4, 8, 16, 32]) * rms, zorder=1,
+			 linewidths=0.5, linestyles="-")
+
+	# add beam, angle is between north celestial pole and major axis, angle increases toward increasing RA
+	ellipse = Ellipse(xy=(cub.im.shape[0]/2 - cutout_pix*0.75,cub.im.shape[0]/2 - cutout_pix*0.75),
+					width=cub.beam["bmin"]/cub.pixsize, height=cub.beam["bmaj"]/cub.pixsize,
+					angle=cub.beam["bpa"], edgecolor='black', fc='w', lw=0.75)
+	ax.add_patch(ellipse)
+
+	# set limits to exact cutout size
+	ax.set_xlim(cub.im.shape[0]/2 - cutout_pix, cub.im.shape[0]/2 + cutout_pix)
+	ax.set_ylim(cub.im.shape[1]/2 - cutout_pix, cub.im.shape[1]/2 + cutout_pix)
+
+	# add circular aperture
+	ellipse = Ellipse(xy=(cub.im.shape[1]/2, cub.im.shape[1]/2), width=2*aper_rad/cub.pixsize, height=2*aper_rad/cub.pixsize, angle=0,
+					edgecolor='maroon', fc="none", lw=1, ls=":")
+	ax.add_patch(ellipse)
+
+	# add text on top of the map
+	ax.text(0.5, 0.95, r'[CII] 158 $\mu$m',
+		  path_effects=[pe.Stroke(linewidth=2, foreground='k'), pe.Normal()],
+		  va='top', ha='center', color="white", transform=ax.transAxes)
+
+
+	divider = make_axes_locatable(ax)
+	cax = divider.append_axes("top", size="5%", axes_class=maxes.Axes)
+	cbar = fig.colorbar(axim, cax=cax, orientation='horizontal',ticks=[-int(vmax),-2*linthres,-linthres/2,linthres/2,2*linthres,int(vmax)],format='%0.1f')
+	cax.xaxis.set_ticks_position('top')
+	cax.xaxis.set_label_text(r"$S_\nu$ (mJy beam$^{-1}$)")
+	cax.xaxis.set_label_position('top')
+
+	lon.set_ticks(number=4)
+	lat.set_minor_frequency(1)
+	ax.tick_params(direction='in', which="both")
+	ax.set_xlabel(r"RA ")
+	ax.set_ylabel(r"Dec")
+
+	plt.savefig("./plots/map_wcsaxes.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
+	plt.savefig("./thumbnails/map_wcsaxes.png", bbox_inches="tight", dpi=72) # web raster version
+	
+	plt.show()
+
+	return vmax, linthres
+
 def main():
+	'''
 	spectrum_single_pixel()
 	spectrum_aperture()
 	spectrum_aperture_technical()
@@ -691,6 +785,8 @@ def main():
 	map_single_paper()
 	map_channels_paper()
 	map_technical()
+	'''
+	map_wcsaxes()
 
 
 if __name__ == "__main__":
