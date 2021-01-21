@@ -132,6 +132,9 @@ The complete code used to generate the paper quality figures, which are shown be
 * Plot the integrated \[CII\] line emission centered on the given coordinate. Overlay logarithmic contours, the clean beam (in the bottom left corner), and the aperture circle.\
 [![map_single_paper](examples/thumbnails/map_single_paper.png)](examples/plots/map_single_paper.pdf)
 
+In a different style with lin-log scaling and wcs axes (also works for continuum maps).\
+[![map_wcsaxes](examples/thumbnails/map_wcsaxes.png)](examples/plots/map_wcsaxes.pdf)
+
 * Plot the curve of growth extracted from the above map. Scale the units to line flux density (Jy km/s) and provide a physical distances axis. The residual scaling correction accounts for a non-negligible 35% systematic error.\
 [![growing_aperture_paper](examples/thumbnails/growing_aperture_paper.png)](examples/plots/growing_aperture_paper.pdf)
 
