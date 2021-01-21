@@ -770,8 +770,135 @@ def map_wcsaxes():
 
 	return vmax, linthres
 
+
+def map_channels_wcsaxes():
+	"""
+	Plot a channel maps from the cube using wcsaxes and lin-log scaling. Disclaimer: ccolorbar size is optimized for 3x3
+	grid.
+	"""
+	filename = "./data/Pisco.cube.50kms.image.fits"
+
+	cutout = 2  # arcsec
+	scale = 1e3  # Jy/beam to mJy/beam
+
+	ra, dec, freq = (205.533741, 9.477317341, 222.547)
+
+	# set up the channel map grid (change the figure size if necessary for font scaling)
+	nrows = 3
+	ncols = 3
+	figsize = (8, 8)
+	idx_center = int(0.5 * nrows * ncols)  # index of the central panel
+
+	# if needed, set offset_v to make channel maps blue- or red-wards of the line, but keeping the line as the
+	# reference to write in the title of each channel (e.g. \pm Delta_v = XX km/s)
+	offset_v = 0
+
+	cub = Cube(filename)  # load map
+	cutout_pix = cutout / cub.pixsize
+	ch_peak = cub.freq2pix(freq*(1+offset_v/3e5))  # referent channel in the cube - one with the peak line emission
+
+	# velocity offset of each channel from the referent frequency
+	#velocities = cub.vels(freq)  # use the frequency from the spectral fit
+	velocities = cub.vels(cub.freqs[ch_peak])  # it's nicer if the ch_peak velocity is set to exactly 0 km/s.
+
+	fig = plt.figure(figsize=figsize)
+
+	# get the extent of the cutouts
+	px, py = cub.radec2pix(ra, dec)
+	r = int(np.round(cutout * 1.05 / cub.pixsize))  # slightly larger cutout than required, for edge bleeding
+
+	# use the reference channel to set the colorbar scale
+	# vmax = np.nanmax(cub.im[px - r:px + r + 1, py - r:py + r + 1, ch_peak]) * scale
+	# or use a range of channels to find the max value for colorbar scaling:
+	vmax = np.nanmax(cub.im[px - r:px + r + 1, py - r:py + r + 1,
+				   ch_peak - idx_center:ch_peak - idx_center + nrows * ncols]) * scale
+	linthres = 3*np.std(cub.im[px - r:px + r + 1, py - r:py + r + 1,
+				   ch_peak - idx_center:ch_peak - idx_center + nrows * ncols]) * scale
+
+	ax_list = []
+
+	for i in range(nrows * ncols):
+		ax = fig.add_subplot(str(nrows)+str(ncols)+str(i+1),projection=cub.wcs, label='overlays', slices=('x', 'y', 50))
+		ax_list.append(ax)
+		ra = ax.coords[0]
+		dec = ax.coords[1]
+
+		ch = ch_peak - idx_center + i  # this will put the peak channel on i = idx_center position
+		subim = cub.im[:,:,ch] *scale  # scale units
+
+		# show image
+		axim = ax.imshow(subim.T, origin='lower', cmap="PuOr_r", vmin=-vmax, vmax=vmax, zorder=-1,
+						 norm=colors.SymLogNorm(linthresh=linthres,
+												linscale=0.5,
+												vmin=-vmax, vmax=vmax))
+
+		# set limits to exact cutout size
+		ax.set_xlim(cub.im.shape[0] / 2 - cutout_pix, cub.im.shape[0] / 2 + cutout_pix)
+		ax.set_ylim(cub.im.shape[1] / 2 - cutout_pix, cub.im.shape[1] / 2 + cutout_pix)
+
+		# calc rms and plot contours
+		rms = cub.rms[ch] * scale
+		ax.contour(subim.T, colors="gray", levels=np.array([-8, -4, -2]) * rms, zorder=1,
+				   linewidths=0.5, linestyles="--")
+		ax.contour(subim.T, colors="black", levels=np.array([2, 4, 8, 16, 32]) * rms, zorder=1,
+				   linewidths=0.5, linestyles="-")
+
+		# add beam, angle is between north celestial pole and major axis, angle increases toward increasing RA
+		ellipse = Ellipse(xy=(cub.im.shape[0]/2 - cutout_pix*0.75,cub.im.shape[1]/2 - cutout_pix*0.75),
+						  width=cub.beam["bmin"][ch]/cub.pixsize, height=cub.beam["bmaj"][ch]/cub.pixsize,
+						  angle=cub.beam["bpa"][ch], edgecolor='black', fc='w', lw=0.75)
+		ax.add_patch(ellipse)
+
+		# add circular aperture to the central panel
+		if i == idx_center:
+			aper_rad = 1.3
+			ellipse = Ellipse(xy=(cub.im.shape[0]/2,cub.im.shape[1]/2),
+							width=2 * aper_rad/cub.pixsize, height=2 * aper_rad/cub.pixsize, angle=0,
+							edgecolor='firebrick', fc="none", lw=1, ls=":")
+			ax.add_patch(ellipse)
+
+		# add text on top of the map
+		paneltext = str(int(velocities[ch]+offset_v)) + " km/s"
+		ax.text(0.5, 0.95, paneltext,
+				path_effects=[pe.Stroke(linewidth=3, foreground='k'), pe.Normal()],
+				va='top', ha='center', color="white", transform=ax.transAxes)
+
+		ax.tick_params(direction='in', which="both")
+
+		dec.set_axislabel(' ')
+		ra.set_axislabel(' ')
+		ra.set_ticklabel_visible(False)
+		dec.set_ticklabel_visible(False)
+
+
+		# writing RA and DEC and ticklabels only on outer edges of the grid
+		if (i)%nrows==0:
+			dec.set_ticklabel_visible(True)
+			dec.set_ticks(number=5)
+		if i >= (nrows-1)*ncols:
+			ra.set_ticklabel_visible(True)
+			ra.set_ticks(number=2)
+		if i == nrows*ncols-2:
+			ra.set_axislabel("RA",fontsize=14)
+		if i == int(nrows/2)*ncols:
+			dec.set_axislabel("DEC",fontsize=14)
+
+	fig.subplots_adjust(right=0.92)
+	cbar_ax = fig.add_axes([0.94, 0.11, 0.03, 0.77])
+	fig.colorbar(axim, cax=cbar_ax)
+	cbar_ax.yaxis.set_label_text(r"$S_\nu$ (mJy beam$^{-1}$)",fontsize=14)
+	cbar_ax.yaxis.set_label_position('right')
+
+	fig.subplots_adjust(hspace=0.1,wspace=0.1)
+
+	plt.savefig("./plots/map_channels_wcsaxes.pdf", bbox_inches="tight",dpi=600)
+	plt.savefig("./thumbnails/map_channels_wcsaxes.png", bbox_inches="tight",dpi=72)
+	plt.show()
+
+	return None
+
 def main():
-	'''
+
 	spectrum_single_pixel()
 	spectrum_aperture()
 	spectrum_aperture_technical()
@@ -785,9 +912,9 @@ def main():
 	map_single_paper()
 	map_channels_paper()
 	map_technical()
-	'''
-	map_wcsaxes()
 
+	map_wcsaxes()
+	map_channels_wcsaxes()
 
 if __name__ == "__main__":
 	main()
