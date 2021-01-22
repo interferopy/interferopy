@@ -55,7 +55,7 @@ def dust_cont_fit():
 		dust_mass, dust_temp = popt
 		dust_mass_err, dust_temp_err = np.sqrt(np.diagonal(pcov))
 
-	# Fit Mdust and beta - best option on the Rayleigh-Jeans tail
+	# Fit Mdust and beta - the best option on the Rayleigh-Jeans tail
 	if 1:
 		popt, pcov = curve_fit(lambda freqs, dust_mass, dust_beta:
 							   dust_sobs(freqs, z, dust_mass, dust_temp, dust_beta),
@@ -109,7 +109,7 @@ def dust_cont_integrate(dust_mass, dust_temp, dust_beta):
 
 def dust_cont_plot(z, dust_mass, dust_temp, dust_beta):
 	"""
-	Plot the datapoints and the fitted dust continuum model.
+	Plot the data points and the fitted dust continuum model.
 	Input points file is hardcoded.
 
 	:param z: redshift of the source
@@ -119,7 +119,7 @@ def dust_cont_plot(z, dust_mass, dust_temp, dust_beta):
 	:return:
 	"""
 
-	# Points to fit, inputs need so to be in SI units
+	# Points to plot
 	t = Table.read("./data/Pisco_continuum_fluxes.txt", format="ascii.commented_header")
 	freqs = t["freq_ghz"]
 	fluxes = t["flux_jy"] * 1e3  # plot mJy
