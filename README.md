@@ -122,7 +122,7 @@ Several specialized tasks and helper functions for data reduction in CASA are lo
 
 ## Examples
 
-Usage of *Cube* and *MultiCube* classes, and their methods, are demonstrated on an ALMA dataset of a high-redshift quasar host galaxy J1342+0928, nicknamed **Pisco** for short. The galaxy host was observed across multiple ALMA bands between 100 and 400 GHz, targeting numerous atomic and molecular emission lines. The results and the method details are published in [Novak et al. (2019)](https://ui.adsabs.harvard.edu/abs/2019ApJ...881...63N/abstract) and [Bañados et al. (2019)](https://ui.adsabs.harvard.edu/abs/2019ApJ...881L..23B/abstract).
+Usage of *Cube* and *MultiCube* classes, and their methods, are demonstrated on an ALMA dataset of a high-redshift quasar host galaxy J1342+0928, nicknamed **Pisco** for short. The galaxy host was observed across multiple ALMA bands between 100 and 400 GHz, targeting numerous atomic and molecular emission lines. The results and the method details are published in [Novak et al. (2019)](https://ui.adsabs.harvard.edu/abs/2019ApJ...881...63N/abstract) and [Bañados et al. (2019)](https://ui.adsabs.harvard.edu/abs/2019ApJ...881L..23B/abstract). For more technical details, see also [Novak et al. (2020)](https://ui.adsabs.harvard.edu/abs/2020ApJ...904..131N/abstract), where a similar analysis was performed on a larger sample of galaxies.
 
 For the following demonstration, the high resolution data targeting the \[CII\] atomic fine structure line is used. Data cubes are located in the [data](examples/data) folder.
 The complete code used to generate the paper quality figures, which are shown below, is available in the [examples.py](examples/examples.py).
