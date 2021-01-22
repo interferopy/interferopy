@@ -156,6 +156,12 @@ The complete code used to generate the paper quality figures, which are shown be
 * Plot the aperture integrated spectrum extracted from the above cube. Perform residual scaling correction. Fit a Gaussian plus a continuum to estimate the line parameters.\
 [![spectrum_aperture_paper](examples/thumbnails/spectrum_aperture_paper.png)](examples/plots/spectrum_aperture_paper.pdf) 
 
+### Fitting the dust continuum
+
+* Fit a modified black body emission to the observed dust continuum emission points. Takes into account the cosmic microwave background heating and contrast. Free fitting parameters are the dust mass, the dust temperature, and the spectral emissivity (slope beta), or a subsample of those. The dust mass affects the overall scaling, the temperature affects the peak position, and beta affects the Rayleigh-Jeans tail slope.
+
+[![dust_continuum_fluxes](examples/thumbnails/dust_continuum_fluxes.png)](examples/plots/dust_continuum_fluxes.pdf) 
+
 ### Technical plots 
 
 * Plot various maps generated during the cleaning process. The cleaned map is the sum of the residual map (units of Jansky per dirty beam, which is the PSF) and the clean component map (units of Jansky per clean beam, which is a Gaussian), and therefore suffers from ill-defined units. Residual scaling method correct for this issue by estimating the clean-to-dirty beam ratio (epsilon).\
