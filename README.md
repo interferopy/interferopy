@@ -149,7 +149,7 @@ The complete code used to generate the paper quality figures, which are shown be
 * Plot channel maps around the peak line emission (set to be at velocity of 0 km/s). The grid size is easily changed to include more or fewer panels.\
 [![map_channels_paper](examples/thumbnails/map_channels_paper.png)](examples/plots/map_channels_paper.pdf) 
 
-* Or, again, in lin-log scaling and wcsaxes.
+* Or, again, in lin-log scaling and wcsaxes.\
 [![map_channels_wcsaxes](examples/thumbnails/map_channels_wcsaxes.png)](examples/plots/map_channels_wcsaxes.pdf) 
 
 
@@ -158,8 +158,7 @@ The complete code used to generate the paper quality figures, which are shown be
 
 ### Fitting the dust continuum
 
-* Fit a modified black body emission to the observed dust continuum emission points. Takes into account the cosmic microwave background heating and contrast. Free fitting parameters are the dust mass, the dust temperature, and the spectral emissivity (slope beta), or a subsample of those. The dust mass affects the overall scaling, the temperature affects the peak position, and beta affects the Rayleigh-Jeans tail slope.
-
+* Fit a modified black body emission to the observed dust continuum emission points. Takes into account the cosmic microwave background heating and contrast. Free fitting parameters are the dust mass, the dust temperature, and the spectral emissivity (slope beta), or a subsample of those. The dust mass affects the overall scaling, the temperature affects the peak position, and beta affects the Rayleigh-Jeans tail slope.\
 [![dust_continuum_fluxes](examples/thumbnails/dust_continuum_fluxes.png)](examples/plots/dust_continuum_fluxes.pdf) 
 
 ### Technical plots 
