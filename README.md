@@ -158,7 +158,7 @@ The complete code used to generate the paper quality figures, which are shown be
 
 ### Fitting the dust continuum
 
-* Fit a modified black body emission to the observed dust continuum emission points. Takes into account the cosmic microwave background heating and contrast. Free fitting parameters are the dust mass, the dust temperature, and the spectral emissivity (slope beta), or a subsample of those. The dust mass affects the overall scaling, the temperature affects the peak position, and beta affects the Rayleigh-Jeans tail slope.\
+* Fit a modified black body emission to the observed dust continuum emission points. The code is available in [dust_continuum_fitting.py](examples/dust_continuum_fitting.py). Takes into account the cosmic microwave background heating and contrast. Free fitting parameters are the dust mass, the dust temperature, and the spectral emissivity (slope beta), or a subsample of those. The dust mass affects the overall scaling, the temperature affects the peak position, and beta affects the Rayleigh-Jeans tail slope.\
 [![dust_continuum_fluxes](examples/thumbnails/dust_continuum_fluxes.png)](examples/plots/dust_continuum_fluxes.pdf) 
 
 ### Technical plots 
