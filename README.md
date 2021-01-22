@@ -8,7 +8,7 @@ The package was developed to aid in the studies of the interstellar medium in hi
 
 ## Usage
 
-Two classes, *Cube* and *MultiCube*, are defined in [cube.py](cube.py) with the goal to speed up the analysis of 2D or 3D data cubes, which are produced by imaging the interferometric data. A collection of helper functions are also available in [tools.py](tools.py). Enable their functionality by importing them.
+Two classes, *Cube* and *MultiCube*, are defined in [cube.py](src/cube.py) with the goal to speed up the analysis of 2D or 3D data cubes, which are produced by imaging the interferometric data. A collection of helper functions are also available in [tools.py](src/tools.py). Enable their functionality by importing them.
     
     from interferopy.cube import Cube, MultiCube
     import interferopy.tools as iftools
@@ -99,7 +99,7 @@ These methods perform both the residual scaling correction, and the primary beam
 
 ### Tools
 
-Additional helper functions are defined in [tools.py](tools.py), for example
+Additional helper functions are defined in [tools.py](src/tools.py), for example
 
     iftools.sigfig(1.234, digits=3)  # rounds to 3 significant digits yielding 1.23
     iftools.calcrms(cub.im)  # calculate noise rms of the input array
@@ -118,7 +118,7 @@ A method to stack different positions in a single 2D map: *stack2d()*, and other
 
 ### Miscellaneous
 
-Several specialized tasks and helper functions for data reduction in CASA are located in [casatools.py](casatools.py) and [casatools_vla_pipe.py](casatools_vla_pipe.py).
+Several specialized tasks and helper functions for data reduction in CASA are located in [casatools.py](src/casatools.py) and [casatools_vla_pipe.py](src/casatools_vla_pipe.py).
 
 ## Examples
 
