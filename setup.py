@@ -1,17 +1,15 @@
 '''
-Created on July 2, 2018
-
-@author: Romain A. Meyer
+interferopy
 
 Setup script
 '''
 
 from distutils.core import setup 
-setup(name='QUICFit',
-	  version= '0.2',
-	  author = 'Romain A. Meyer',
-	  author_email = 'r.meyer.17@ucl.ac.uk',
-	  package_dir = {'QUICFit':'src'},
-      package_data = {'QUICFit': ['data/*.txt']},
-	  packages = ['QUICFit']
+setup(name='interferopy',
+	  version= '0.1',
+	  author = 'Mladen Novak',
+	  author_email = 'novak@mpia.de',
+	  package_dir = {'interferopy':'src'},
+      package_data = {'interferopy': ['examples/*']},
+	  packages = ['interferopy']
 	  )
