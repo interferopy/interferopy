@@ -5,6 +5,15 @@ A Python library of common tasks used in the observational radio/mm interferomet
 
 The package was developed to aid in the studies of the interstellar medium in high-redshift quasar host galaxies using emission lines, as well as to create publication quality plots.
 
+## Installation
+
+Download the code, enter the interferopy folder and run
+
+    python setup.py install
+    
+Or, alternatively, install directly from the repository with 
+
+    python -m pip install git+https://github.com/mladenovak/interferopy
 
 ## Usage
 
