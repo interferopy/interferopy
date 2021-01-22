@@ -143,7 +143,7 @@ The complete code used to generate the paper quality figures, which are shown be
 * Plot channel maps around the peak line emission (set to be at velocity of 0 km/s). The grid size is easily changed to include more or fewer panels.\
 [![map_channels_paper](examples/thumbnails/map_channels_paper.png)](examples/plots/map_channels_paper.pdf) 
 
-* Or, again, in lin-log scaling and wcsaxes.
+* Or, again, in lin-log scaling and wcsaxes, and more accessible to people with colour-blindness.
 [![map_channels_wcsaxes](examples/thumbnails/map_channels_wcsaxes.png)](examples/plots/map_channels_wcsaxes.pdf) 
 
 
