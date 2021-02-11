@@ -364,7 +364,7 @@ class Cube:
 
 	def spectrum(self, ra: float = None, dec: float = None, radius=0.0,
 				 px: int = None, py: int = None, channel: int = None, freq: float = None, calc_error=False) \
-			-> (np.ndarray, np.ndarray, np.ndarray):
+			-> (np.ndarray, np.ndarray, np.ndarray,np.ndarray):
 		"""
 		Extract the spectrum (for 3D cube) or a single flux density value (for 2D map) at a given coord (ra, dec)
 		integrated within a circular aperture of a given radius.
@@ -404,6 +404,7 @@ class Cube:
 				flux = np.array([flux[channel]])
 				npix = np.array([npix[channel]])
 				err = np.array([err[channel]])
+				peak_sb = flux
 		else:
 			self.log("Extracting aperture spectrum.")
 			# grid of distances from the source in arcsec, need for the aperture mask
@@ -415,22 +416,25 @@ class Cube:
 			if channel is not None:
 				npix = np.array([np.sum(np.isfinite(self.im[:, :, channel][w]))])
 				flux = np.array([np.nansum(self.im[:, :, channel][w]) / self.beamvol[channel]])
+				peak_sb =  np.array([np.nanmax(self.im[:, :, channel][w]) ])
 				if calc_error:
 					err = np.array(self.rms[channel] * np.sqrt(npix / self.beamvol[channel]))
 				else:
 					err = np.array([np.nan])
 			else:
 				flux = np.zeros(self.nch)
+				peak_sb = np.zeros(self.nch)
 				npix = np.zeros(self.nch)
 				for i in range(self.nch):
 					flux[i] = np.nansum(self.im[:, :, i][w]) / self.beamvol[i]
+					peak_sb[i] = np.nanmax(self.im[:, :, i][w])
 					npix[i] = np.sum(np.isfinite(self.im[:, :, i][w]))
 				if calc_error:
 					err = np.array(self.rms * np.sqrt(npix / self.beamvol))
 				else:
 					err = np.full_like(flux, np.nan)
 
-		return flux, err, npix
+		return flux, err, npix, peak_sb
 
 	def single_pixel_value(self, ra: float = None, dec: float = None, freq: float = None,
 						   channel: int = None, calc_error: bool = False):
@@ -888,9 +892,9 @@ class MultiCube:
 		# run aperture extraction on all cubes
 		# the beam volume should be the same in all of them (checked by __cubes_prepare)
 		params = dict(ra=ra, dec=dec, radius=radius, px=px, py=py, channel=channel, freq=freq)
-		flux_image, err, npix = self["image"].spectrum(calc_error=calc_error, **params)  # compute rms only on this map
-		flux_residual, _, _ = self["residual"].spectrum(calc_error=False, **params)
-		flux_dirty, _, _ = self["dirty"].spectrum(calc_error=False, **params)
+		flux_image, err, npix, peak_sb = self["image"].spectrum(calc_error=calc_error, **params)  # compute rms only on this map
+		flux_residual, _, _ ,_ = self["residual"].spectrum(calc_error=False, **params)
+		flux_dirty, _, _ , _ = self["dirty"].spectrum(calc_error=False, **params)
 		flux_clean = flux_image - flux_residual
 
 		# alternatively, force creation of the clean components cube
@@ -921,7 +925,8 @@ class MultiCube:
 
 		# corrected flux is estimated from the dirty map and the clean-to-dirty beam ratio (epsilon)
 		flux = epsilon_fix * flux_dirty
-		err = epsilon_fix * err  # TODO: should the error estimate be scaled with epsilon as well?
+		err = epsilon_fix * err
+		peak_sb = epsilon_fix * peak_sb
 
 		# apply PB correction if possible
 		if apply_pb_corr and "pb" in self.loaded_cubes:
@@ -929,6 +934,8 @@ class MultiCube:
 			pb, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq, calc_error=False)
 			flux = flux / pb
 			err = err / pb
+			peak_sb = peak_sb / pb
+
 		elif apply_pb_corr and "pb" not in self.loaded_cubes:
 			self.log("Warning: Cannot correct for PB, missing pb map.")
 			pb = np.full(len(flux_image), np.nan)
@@ -962,10 +969,11 @@ class MultiCube:
 					 nbeam,  # Number of beams inside the aperture
 					 epsilon,  # Clean-to-dirty beam ratio in the channel
 					 rmses,  # Rms noise of the channel
+					 peak_sb, # (Corrected) Peak Surface Brightness of the channel
 					 pb],  # Primary beam response (<=1) at the given coordinate, single pixel value
 					names=["channel", "freq", "flux", "err", "epsilon_fix",
 						   "flux_image", "flux_dirty", "flux_residual", "flux_clean",
-						   "npix", "nbeam", "epsilon", "rms", "pb"])
+						   "npix", "nbeam", "epsilon", "rms", "peak_sb" , "pb"])
 
 		return np.array(flux), np.array(err), tab
 
