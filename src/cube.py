@@ -880,7 +880,8 @@ class MultiCube:
 
 		# take single pixel value if no aperture radius given
 		if radius <= 0:
-			raise ValueError("No aperture is defined!")
+			print('No aperture defined - taking a single pixel')
+			#raise ValueError("No aperture is defined!")
 
 		# check and prepare cubes for residual scaling
 		if not self.__cubes_prepare():
