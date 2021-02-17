@@ -97,15 +97,22 @@ class Cube:
 		elif naxis == 2:
 			# add the third axis, if missing, because several methods require it
 			image = self.hdu[0].data[np.newaxis, :, :].T
+			# add also in saved header in Cube
+			self.head['NAXIS3'] = 1
+			self.head['NAXIS'] = 3
+			self.head['CTYPE3'] = 'FREQ'
+			self.head['CRVAL3'] = self.head['RESTFREQ']
+			self.head['CDELT3'] = 1
+			self.head['CRPIX3'] = 0
 			naxis = 3
-			self.log("Warning: did not test 2D maps with the missing 3rd axis.")
+			self.log("Warning: 2maps may have incorrect pixsize/beamvol. Please replace!")
 		else:
 			raise RuntimeError("Invalid number of cube dimensions.")
 		self.im = image
 		self.naxis = naxis
 
 		# save the world coord system
-		self.wcs = wcs.WCS(self.head, naxis=naxis)
+		self.wcs = wcs.WCS(self.head, naxis=self.naxis)
 
 		# populate frequency details (freq array, channel size, number of channels)
 		# convert from velocity header if necessary, scale to GHz
