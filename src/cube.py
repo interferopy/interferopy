@@ -404,7 +404,7 @@ class Cube:
 				flux = np.array([flux[channel]])
 				npix = np.array([npix[channel]])
 				err = np.array([err[channel]])
-				peak_sb = flux
+			peak_sb = flux
 		else:
 			self.log("Extracting aperture spectrum.")
 			# grid of distances from the source in arcsec, need for the aperture mask
