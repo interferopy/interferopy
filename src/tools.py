@@ -455,3 +455,160 @@ def arcsec2kpc(z: float = 0):
 	"""
 	cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 	return 1. / cosmo.arcsec_per_kpc_proper(z).value
+
+
+def line_stats_sextractor(catalogue, binning,SNR_min=5):
+    '''
+    A convenience function extracting high-SNR clumps from a FINDCLUMP(s) output catalogue, adding the binning and
+    changing the frequency to GHz, plus reordering for output catalogues
+    :param catalogue: findclump output
+    :param binning: kernel half-width = (minwidth -1)/2
+    :param SNR_min: mininum SNR above which to pick clumps
+    :return: reordered, cleaned catalogue
+    '''
+
+    # By definition, the output of findclumps is
+    # SNR_WIN FLUX_MAX X_IMAGE Y_IMAGE RA(J2000,deg) DEC(J2000,deg) Center_channel RMS
+    snr = catalogue[:,1] / catalogue[:,7]
+    freq_GHz = catalogue[:,8]/1e9
+
+    ind_high_SN = np.where(snr>SNR_min)[0]
+
+    # writing RA DEC FREQ(GHZ) X Y SNR FLUX_MAX
+    shuffled_catalogue = np.zeros(shape=(len(ind_high_SN),8))
+    shuffled_catalogue[:,0] = catalogue[ind_high_SN,4]
+    shuffled_catalogue[:,1] = catalogue[ind_high_SN,5]
+    shuffled_catalogue[:,2] = freq_GHz[ind_high_SN]
+    shuffled_catalogue[:,3] = catalogue[ind_high_SN,2]
+    shuffled_catalogue[:,4] = catalogue[ind_high_SN,3]
+    shuffled_catalogue[:,5] = snr[ind_high_SN]
+    shuffled_catalogue[:,6] = catalogue[ind_high_SN,1]
+    shuffled_catalogue[:,7] = np.ones(len(ind_high_SN))*binning
+
+    return shuffled_catalogue
+
+
+def run_line_stats_sex(sextractor_pos_catalogue_name,sextractor_neg_catalogue_name, binning_array = np.arange(1,20,2),
+                       SNR_min =5):
+    '''
+    Merges, cleans and reformat positive and negative clump catalogues of different kernel widths. Also makes a DS9
+    region file for all clumps above a chosen threshold. Made to operate over all kernel half-widths for convenience.
+    :param sextractor_pos_catalogue_name: Generic catalogue name for the field, excluding kernel half-width, positive clumps
+    :param sextractor_neg_catalogue_name: Generic catalogue name for the field, excluding kernel half-width, negative clumps
+    :param binning_array: array of kernel half-width to process for the given field
+    :param SNR_min: Threshold SN to select clump detections
+    :return: Saves region files (input name +".reg") and catalogues (input name +".out") for later study
+    '''
+
+    # open region files in overwrite mode
+    pos_clumps_reg = open(sextractor_pos_catalogue_name+'minSNR_'+str(SNR_min)+'.reg','w+')
+    pos_clumps_reg.write('# Region file format: DS9 version 4.1 \n '
+                         'global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 '
+                         'dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 \n')
+    pos_clumps_reg.write('fk5 \n')
+    neg_clumps_reg = open(sextractor_neg_catalogue_name+'minSNR_'+str(SNR_min)+'.reg','w+')
+    neg_clumps_reg.write('# Region file format: DS9 version 4.1 \n '
+                         'global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 '
+                         'dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 \n')
+    neg_clumps_reg.write('fk5 \n')
+
+    pos_clumps_name_out = sextractor_pos_catalogue_name+'_minSNR_'+str(SNR_min)+'.out'
+    neg_clumps_name_out = sextractor_neg_catalogue_name+'_minSNR_'+str(SNR_min)+'.out'
+
+    for binning in binning_array:
+        pos_catalogue = np.loadtxt(sextractor_pos_catalogue_name + '_kw'+str(int(binning))+'.cat')
+        neg_catalogue = np.loadtxt(sextractor_neg_catalogue_name + '_kw'+str(int(binning))+'.cat')
+
+        cat_for_out_file_pos = line_stats_sextractor(catalogue=pos_catalogue,binning=binning,SNR_min=SNR_min)
+        cat_for_out_file_neg = line_stats_sextractor(catalogue=neg_catalogue,binning=binning,SNR_min=SNR_min)
+
+        for x in cat_for_out_file_pos:
+            pos_clumps_reg.write('circle(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
+                                            + ',0.5") \n  # text(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
+                                            +')   text={' +'{:7.3f}'.format(x[2]) +'} \n')
+        for x in cat_for_out_file_neg:
+            neg_clumps_reg.write('circle(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
+                                            + ',0.5") \n  # text(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
+                                            +')   text={' +'{:7.3f}'.format(x[2]) +'} \n')
+
+        if binning == binning_array[0]:
+            np.savetxt(fname=pos_clumps_name_out, X=cat_for_out_file_pos,fmt = ['%9.5f','%9.5f','%8.4f','%5.1f','%5.1f','%6.2f','%9.6f','%2.0f'])
+            np.savetxt(fname=neg_clumps_name_out, X=cat_for_out_file_neg,fmt = ['%9.5f','%9.5f','%8.4f','%5.1f','%5.1f','%6.2f','%9.6f','%2.0f'])
+        else:
+            with open(pos_clumps_name_out, "ab") as f:
+                np.savetxt(fname=f,X=cat_for_out_file_pos,fmt = ['%9.5f','%9.5f','%8.4f','%5.1f','%5.1f','%6.2f','%9.6f','%2.0f'])
+            with open(neg_clumps_name_out, "ab") as f:
+                np.savetxt(fname=f,X=cat_for_out_file_neg,fmt = ['%9.5f','%9.5f','%8.4f','%5.1f','%5.1f','%6.2f','%9.6f','%2.0f'])
+
+
+def crop_doubles(cat_name,delta_offset_arcsec = 2, delta_freq = 0.1 ):
+    '''
+    Takes a catalogue of clumps and group sources likely from the same target. Tolerance in sky posoition and frequency
+    to be given. If the data is not continuum-subtracted, continuum sources will result in multiple groups of clumps
+    separated by delta_freq. Best used on continuum-subtracted data.
+    :param cat_name:
+    :param delta_offset_arcsec:
+    :param delta_freq:
+    :return: Writes a copy of the input catalogue, with the added group number for each clump ("_groups.cat"),
+    a reduced catalogue with the highest SN detection for each group ("_cropped.cat"), a region files to plot the
+    positions of the latter.
+    '''
+
+    delta_offset_deg = delta_offset_arcsec /3600.
+
+    catalogue_data = np.loadtxt(cat_name)
+
+    # sort by SNR decreasing
+    catalogue_data = catalogue_data[catalogue_data[:,1].argsort()[::-1]]
+    cosd_array = np.cos(catalogue_data[:,1]*np.pi/180.)
+
+
+    group = -np.ones(len(catalogue_data))
+    ncnt = 0
+
+    for i in range(len(catalogue_data)):
+
+        if group[i] < 0:
+            group[i] = ncnt
+            ncnt +=1
+
+            ra = catalogue_data[i,0]
+            dec = catalogue_data[i,1]
+            cosd = cosd_array[i]
+            freq = catalogue_data[i,2]
+            distances = np.sqrt( ((ra-catalogue_data[:,0])*cosd )** 2 + (dec-catalogue_data[:,1])**2 )
+            matches = (distances < delta_offset_deg) & (np.abs(freq-catalogue_data[:,2]) < delta_freq) & (group <0)
+
+            if np.sum(matches) > 0:
+                ind_same_group = np.where(matches)[0]
+                group[ind_same_group] = group[i]
+
+    catalogue_final = np.hstack([catalogue_data,np.reshape(group,(len(group),1))])
+
+    catalogue_final = catalogue_final[catalogue_final[:,-1].argsort()]
+
+    np.savetxt(cat_name[:-4]+'_groups.cat',catalogue_final,
+               fmt=['%9.5f','%9.5f','%8.4f','%5.1f','%5.1f','%6.2f','%9.6f','%2.0f','%2.0i'])
+
+    catalogue_cropped_best = np.zeros((ncnt-2,len(catalogue_final[0])))
+    for i in range(ncnt-2):
+        ind= np.where([catalogue_final[:,-1] == i])[1]
+        if len(ind)>1:
+            argmax_SN = np.argmax(catalogue_final[ind,4])
+
+            catalogue_cropped_best[i,:] = catalogue_final[ind][argmax_SN]
+        else:
+            catalogue_cropped_best[i, :] = catalogue_final[ind,:]
+
+    np.savetxt(cat_name[:-4]+'_cropped.cat',catalogue_cropped_best,
+               fmt=['%9.5f','%9.5f','%8.4f','%5.1f','%5.1f','%6.2f','%9.6f','%2.0f','%2.0i'])
+
+    catalogue_cropped_best_region = open(cat_name[:-4]+'_cropped.reg','w+')
+    catalogue_cropped_best_region.write('# Region file format: DS9 version 4.1 \n '
+                        'global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 '
+                         'dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 \n')
+    catalogue_cropped_best_region.write('fk5 \n')
+    for x in catalogue_cropped_best:
+        catalogue_cropped_best_region.write('circle(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
+                                            + ',0.5") \n  # text(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
+                                            +')   text={' +'{:7.3f}'.format(x[2]) + '}\n')

@@ -4,6 +4,7 @@ from astropy.io import fits
 from astropy.table import Table
 from astropy import wcs
 import scipy.constants as const
+from os.path import isfile,exists
 
 import interferopy.tools as tools
 
@@ -97,15 +98,22 @@ class Cube:
 		elif naxis == 2:
 			# add the third axis, if missing, because several methods require it
 			image = self.hdu[0].data[np.newaxis, :, :].T
+			# add also in saved header in Cube
+			self.head['NAXIS3'] = 1
+			self.head['NAXIS'] = 3
+			self.head['CTYPE3'] = 'FREQ'
+			self.head['CRVAL3'] = self.head['RESTFREQ']
+			self.head['CDELT3'] = 1
+			self.head['CRPIX3'] = 0
 			naxis = 3
-			self.log("Warning: did not test 2D maps with the missing 3rd axis.")
+			self.log("Warning: 2maps may have incorrect pixsize/beamvol. Please replace!")
 		else:
 			raise RuntimeError("Invalid number of cube dimensions.")
 		self.im = image
 		self.naxis = naxis
 
 		# save the world coord system
-		self.wcs = wcs.WCS(self.head, naxis=naxis)
+		self.wcs = wcs.WCS(self.head, naxis=self.naxis)
 
 		# populate frequency details (freq array, channel size, number of channels)
 		# convert from velocity header if necessary, scale to GHz
@@ -364,7 +372,7 @@ class Cube:
 
 	def spectrum(self, ra: float = None, dec: float = None, radius=0.0,
 				 px: int = None, py: int = None, channel: int = None, freq: float = None, calc_error=False) \
-			-> (np.ndarray, np.ndarray, np.ndarray):
+			-> (np.ndarray, np.ndarray, np.ndarray,np.ndarray):
 		"""
 		Extract the spectrum (for 3D cube) or a single flux density value (for 2D map) at a given coord (ra, dec)
 		integrated within a circular aperture of a given radius.
@@ -404,6 +412,7 @@ class Cube:
 				flux = np.array([flux[channel]])
 				npix = np.array([npix[channel]])
 				err = np.array([err[channel]])
+			peak_sb = flux
 		else:
 			self.log("Extracting aperture spectrum.")
 			# grid of distances from the source in arcsec, need for the aperture mask
@@ -415,22 +424,25 @@ class Cube:
 			if channel is not None:
 				npix = np.array([np.sum(np.isfinite(self.im[:, :, channel][w]))])
 				flux = np.array([np.nansum(self.im[:, :, channel][w]) / self.beamvol[channel]])
+				peak_sb =  np.array([np.nanmax(self.im[:, :, channel][w]) ])
 				if calc_error:
 					err = np.array(self.rms[channel] * np.sqrt(npix / self.beamvol[channel]))
 				else:
 					err = np.array([np.nan])
 			else:
 				flux = np.zeros(self.nch)
+				peak_sb = np.zeros(self.nch)
 				npix = np.zeros(self.nch)
 				for i in range(self.nch):
 					flux[i] = np.nansum(self.im[:, :, i][w]) / self.beamvol[i]
+					peak_sb[i] = np.nanmax(self.im[:, :, i][w])
 					npix[i] = np.sum(np.isfinite(self.im[:, :, i][w]))
 				if calc_error:
 					err = np.array(self.rms * np.sqrt(npix / self.beamvol))
 				else:
 					err = np.full_like(flux, np.nan)
 
-		return flux, err, npix
+		return flux, err, npix, peak_sb
 
 	def single_pixel_value(self, ra: float = None, dec: float = None, freq: float = None,
 						   channel: int = None, calc_error: bool = False):
@@ -623,6 +635,106 @@ class Cube:
 		fits.writeto(filename, self.im.T, self.head, overwrite=overwrite)
 		self.log("Fits file saved to " + filename)
 
+	def findclumps_1kernel(self, output_file, rms_region=1./4., minwidth = 3,sextractor_param_file = 'default.sex',
+				   clean_tmp= True,negative=False):
+		'''
+		  FINDCLUMP(s) algorithm (Decarli+2014). Takes the cube image and outputs the 3d (x,y,wavelength) position
+		  of clumps of a minimum SN specified. Works by using a top-hat filter on a rebinned version of the datacube.
+		  :param output_file: relative/absolute path to the outpute catalogue
+		  :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord]. If none, takes the central
+		                  25% pixels (square)
+		  :param sn_threshold: Minimum SN of peaks to retain
+		  :param minwidth: Number of channels to bin
+		  :return:
+		  '''
+
+		if not exists('./tmp/'):
+			os.system('mkdir ./tmp')
+
+		assert not (isfile(output_file)), 'Output file already exists - please delete or change name!'
+		if minwidth % 2 == 1:
+			chnbox = int((minwidth - 1) / 2.0)
+		else:
+			print('WARNING: Window must be odd number of channels, using minwidth +1')
+			chnbox = int(minwidth / 2.0)
+
+		if negative:
+			cube = -self.im
+		else:
+			cube = self.im
+
+		nax1 = cube.shape[0]
+		nax2 = cube.shape[1]
+		nax3 = cube.shape[2]
+
+		for k in range(chnbox, nax3 - chnbox - 1):
+			# collapsing cube over chosen channel number, saving rms in center
+			im_channel_sum = np.nansum(cube[:, :, k - chnbox:k + chnbox + 1], axis=-1)
+			rms = np.nanstd(
+				im_channel_sum[int(nax2 / 2) - int(nax2 * rms_region) - 1:int(nax2 / 2) + int(nax2 * rms_region),
+				int(nax1 / 2) - int(nax1 * rms_region) - 1:int(nax1 / 2) + int(nax1 * rms_region)])
+
+			hdu = fits.PrimaryHDU(data= im_channel_sum,header=self.head)
+			hdul = fits.HDUList([hdu])
+			hdul.writeto('./tmp/mask_' + str(k) + '.fits', overwrite=True)
+
+			# run Sextractor
+			os.system('sex ./tmp/mask_' + str(k) + '.fits -c ' + sextractor_param_file)
+			if clean_tmp:
+				os.system('rm ./tmp/mask_' + str(k) + '.fits')
+			sextractor_cat = np.genfromtxt('./target.list', skip_header=6)
+			if sextractor_cat.shape == (0,):
+				continue
+			# append k , rms, freq to sextractor_cat
+			sextractor_cat = np.hstack([sextractor_cat, np.ones((len(sextractor_cat), 1)) * k,
+										np.ones((len(sextractor_cat), 1)) * rms,
+										np.ones((len(sextractor_cat), 1)) * self.freqs[k]])
+			if k == chnbox:
+				np.savetxt(fname=output_file + '_kw' + str(int(minwidth)) + '.cat', X=sextractor_cat,
+						   header="# 1 SNR_WIN                Gaussian-weighted SNR \n \
+		                #   2 FLUX_MAX               Peak flux above background                                 [count] \n \
+		                #   3 X_IMAGE                Object position along x                                    [pixel] \n \
+		                #   4 Y_IMAGE                Object position along y                                    [pixel] \n \
+		                #   5 ALPHA_J2000            Right ascension of barycenter (J2000)                      [deg] \n \
+		                #   6 DELTA_J2000            Declination of barycenter (J2000)                          [deg] \n \
+		                #   7 k                      Central Channel                                            [pixel] \n \
+		                #   8 RMS                    RMS of collapsed channel map                               [Jy/beam] \n \
+		                #   9 FREQ                   CENTRAL FREQUENCY                                          [Hz] ")
+			else:
+				with open(output_file + '_kw' + str(int(minwidth)) + '.cat', "ab") as f:
+					np.savetxt(fname=f, X=sextractor_cat)
+
+	def findclumps_full(self,output_file, kernels= np.arange(3, 20, 2), rms_region=1./4.,
+						sextractor_param_file = 'default.sex',clean_tmp= True, min_SNR=0,
+						delta_offset_arcsec=2,delta_freq=0.1):
+		'''
+		Run the findclump search for different kernels sizes, on both the negative and positive cubes.
+		Crops doubles and trim candidates above a mininum SNR. See findclumps_1kernel().
+		:param output_file: relative/absolute path to the outpute catalogue
+		:param rms_region: Region to compute the rms noise [2x2 array in image pixel coord]. If none, takes the central
+		                  25% pixels (square)
+		:param sn_threshold: Minimum SN of peaks to retain
+		:param minwidth: Number of channels to bin
+		:min_SNR: min SNR for final catalogues
+		:delta_offset_arcsec: maximum offset to match detections in the cube
+		:delta_freq: maximum frequency offset to match detections in the cube
+		'''
+
+		for i in kernels:
+			self.findclumps_1kernel( output_file=output_file + '_clumpsP',negative=False, minwidth=i,clean_tmp=clean_tmp,
+							 rms_region=rms_region,sextractor_param_file=sextractor_param_file)
+			self.findclumps_1kernel( output_file=output_file + '_clumpsN',negative=True, minwidth=i,clean_tmp=clean_tmp,
+							 rms_region=rms_region,sextractor_param_file=sextractor_param_file)
+
+		tools.run_line_stats_sex(sextractor_pos_catalogue_name=output_file + '_clumpsP',
+						   sextractor_neg_catalogue_name=output_file + '_clumpsN',
+						   binning_array=kernels, SNR_min=min_SNR)
+
+		tools.crop_doubles(cat_name=output_file+ "_clumpsP_minSNR_"+str(min_SNR)+".out",
+						   delta_offset_arcsec = delta_offset_arcsec,delta_freq = delta_freq)
+
+		tools.crop_doubles(cat_name=output_file + "_clumpsN_minSNR_"+str(min_SNR)+".out",
+						   delta_offset_arcsec = delta_offset_arcsec,delta_freq = delta_freq)
 
 class MultiCube:
 	"""
@@ -876,7 +988,8 @@ class MultiCube:
 
 		# take single pixel value if no aperture radius given
 		if radius <= 0:
-			raise ValueError("No aperture is defined!")
+			print('No aperture defined - taking a single pixel')
+			#raise ValueError("No aperture is defined!")
 
 		# check and prepare cubes for residual scaling
 		if not self.__cubes_prepare():
@@ -888,9 +1001,9 @@ class MultiCube:
 		# run aperture extraction on all cubes
 		# the beam volume should be the same in all of them (checked by __cubes_prepare)
 		params = dict(ra=ra, dec=dec, radius=radius, px=px, py=py, channel=channel, freq=freq)
-		flux_image, err, npix = self["image"].spectrum(calc_error=calc_error, **params)  # compute rms only on this map
-		flux_residual, _, _ = self["residual"].spectrum(calc_error=False, **params)
-		flux_dirty, _, _ = self["dirty"].spectrum(calc_error=False, **params)
+		flux_image, err, npix, peak_sb = self["image"].spectrum(calc_error=calc_error, **params)  # compute rms only on this map
+		flux_residual, _, _ ,_ = self["residual"].spectrum(calc_error=False, **params)
+		flux_dirty, _, _ , _ = self["dirty"].spectrum(calc_error=False, **params)
 		flux_clean = flux_image - flux_residual
 
 		# alternatively, force creation of the clean components cube
@@ -921,7 +1034,8 @@ class MultiCube:
 
 		# corrected flux is estimated from the dirty map and the clean-to-dirty beam ratio (epsilon)
 		flux = epsilon_fix * flux_dirty
-		err = epsilon_fix * err  # TODO: should the error estimate be scaled with epsilon as well?
+		err = epsilon_fix * err
+		peak_sb = epsilon_fix * peak_sb
 
 		# apply PB correction if possible
 		if apply_pb_corr and "pb" in self.loaded_cubes:
@@ -929,6 +1043,8 @@ class MultiCube:
 			pb, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq, calc_error=False)
 			flux = flux / pb
 			err = err / pb
+			peak_sb = peak_sb / pb
+
 		elif apply_pb_corr and "pb" not in self.loaded_cubes:
 			self.log("Warning: Cannot correct for PB, missing pb map.")
 			pb = np.full(len(flux_image), np.nan)
@@ -962,10 +1078,11 @@ class MultiCube:
 					 nbeam,  # Number of beams inside the aperture
 					 epsilon,  # Clean-to-dirty beam ratio in the channel
 					 rmses,  # Rms noise of the channel
+					 peak_sb, # (Corrected) Peak Surface Brightness of the channel
 					 pb],  # Primary beam response (<=1) at the given coordinate, single pixel value
 					names=["channel", "freq", "flux", "err", "epsilon_fix",
 						   "flux_image", "flux_dirty", "flux_residual", "flux_clean",
-						   "npix", "nbeam", "epsilon", "rms", "pb"])
+						   "npix", "nbeam", "epsilon", "rms", "peak_sb" , "pb"])
 
 		return np.array(flux), np.array(err), tab
 
