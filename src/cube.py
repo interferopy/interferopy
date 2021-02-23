@@ -4,6 +4,7 @@ from astropy.io import fits
 from astropy.table import Table
 from astropy import wcs
 import scipy.constants as const
+from os.path import isfile,exists
 
 import interferopy.tools as tools
 
@@ -633,6 +634,76 @@ class Cube:
 
 		fits.writeto(filename, self.im.T, self.head, overwrite=overwrite)
 		self.log("Fits file saved to " + filename)
+
+	def findclumps(self, output_file, rms_region=1./4., minwidth = 3,sextractor_param_file = 'default.sex',
+				   clean_tmp= True,negative=False):
+		'''
+		  FINDCLUMP(s) algorithm (Decarli+2014). Takes the cube image and outputs the 3d (x,y,wavelength) position
+		  of clumps of a minimum SN specified. Works by using a top-hat filter on a rebinned version of the datacube.
+		  :param output_file: relateive/absolute path to the outpute catalogue
+		  :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord]. If none, takes the central
+		                  25% pixels (square)
+		  :param sn_threshold: Minimum SN of peaks to retain
+		  :param minwidth: Number of channels to bin
+		  :param hdu_index: HDU index for header and data if multiple HDU
+		  :return:
+		  '''
+
+		if not exists('./tmp/'):
+			os.system('mkdir ./tmp')
+
+		assert not (isfile(output_file)), 'Output file already exists - please delete or change name!'
+		if minwidth % 2 == 1:
+			chnbox = int((minwidth - 1) / 2.0)
+		else:
+			print('WARNING: Window must be odd number of channels, using minwidth +1')
+			chnbox = int(minwidth / 2.0)
+
+		if negative:
+			cube = -self.im
+		else:
+			cube = self.im
+
+		nax1 = cube.shape[0]
+		nax2 = cube.shape[1]
+		nax3 = cube.shape[2]
+
+		for k in range(chnbox, nax3 - chnbox - 1):
+			# collapsing cube over chosen channel number, saving rms in center
+			im_channel_sum = np.nansum(cube[:, :, k - chnbox:k + chnbox + 1], axis=-1)
+			rms = np.nanstd(
+				im_channel_sum[int(nax2 / 2) - int(nax2 * rms_region) - 1:int(nax2 / 2) + int(nax2 * rms_region),
+				int(nax1 / 2) - int(nax1 * rms_region) - 1:int(nax1 / 2) + int(nax1 * rms_region)])
+
+			hdu = fits.PrimaryHDU(data= im_channel_sum,header=self.head)
+			hdul = fits.HDUList([hdu])
+			hdul.writeto('./tmp/mask_' + str(k) + '.fits', overwrite=True)
+
+			# run Sextractor
+			os.system('sex ./tmp/mask_' + str(k) + '.fits -c ' + sextractor_param_file)
+			if clean_tmp:
+				os.system('rm ./tmp/mask_' + str(k) + '.fits')
+			sextractor_cat = np.genfromtxt('./target.list', skip_header=6)
+			if sextractor_cat.shape == (0,):
+				continue
+			# append k , rms, freq to sextractor_cat
+			sextractor_cat = np.hstack([sextractor_cat, np.ones((len(sextractor_cat), 1)) * k,
+										np.ones((len(sextractor_cat), 1)) * rms,
+										np.ones((len(sextractor_cat), 1)) * self.freqs[k]])
+			if k == chnbox:
+				np.savetxt(fname=output_file + '_kw' + str(int(minwidth)) + '.cat', X=sextractor_cat,
+						   header="# 1 SNR_WIN                Gaussian-weighted SNR \n \
+		                #   2 FLUX_MAX               Peak flux above background                                 [count] \n \
+		                #   3 X_IMAGE                Object position along x                                    [pixel] \n \
+		                #   4 Y_IMAGE                Object position along y                                    [pixel] \n \
+		                #   5 ALPHA_J2000            Right ascension of barycenter (J2000)                      [deg] \n \
+		                #   6 DELTA_J2000            Declination of barycenter (J2000)                          [deg] \n \
+		                #   7 k                      Central Channel                                            [pixel] \n \
+		                #   8 RMS                    RMS of collapsed channel map                               [Jy/beam] \n \
+		                #   9 FREQ                   CENTRAL FREQUENCY                                          [Hz] ")
+			else:
+				with open(output_file + '_kw' + str(int(minwidth)) + '.cat', "ab") as f:
+					np.savetxt(fname=f, X=sextractor_cat)
 
 
 class MultiCube:
