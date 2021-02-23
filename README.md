@@ -178,6 +178,16 @@ Note how the cumulative integral of the dirty beam approaches zero at large radi
  * Plot the aperture integrated spectrum derived from multiple maps. Use the high signal-to-noise channels (those with line emission) to fix the clean-to-dirty beam ratio for all channels.\
 [![spectrum_aperture_technical](examples/thumbnails/spectrum_aperture_technical.png)](examples/plots/spectrum_aperture_technical.pdf) 
 
+### Finding line emitters
+
+Interferopy includes an implementation of the Findclumps algorithm used by Walter+2018 to find emitters in ASPECS.
+At its core, Findclumps simply convolves the cube with boxcar kernels of various sizes, and run sextractor on the created image to find "clumps". It does so on the original and inverted cubes, enabling the user to estimate which detections are real or not. It groups "clumps" by frequency and spatial distance, at the discretion of the user. Example usage:
+    
+    from interferopy import Cube
+    cube = Cube('absolute_path/filename')
+    cube.findclumps_full(output_file='./output_directory/file_prefix')
+                kernels= np.arange(3, 20, 2),sextractor_param_file = 'default.sex',
+                clean_tmp=True, min_SNR=3,delta_offset_arcsec=2,delta_freq=0.1)
 
 ### Cheers!
 Enjoy one pisco coctail, surrounded by dust, bubbling with CO, and with a twist of CNO elements!
