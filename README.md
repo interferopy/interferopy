@@ -188,7 +188,7 @@ To run findlcumps, you will need to have sextractor installed (which can be done
 Example usage:
 
     
-    from interferopy import Cube
+    from interferopy.cube import Cube
     cube = Cube('absolute_path/filename')
     cube.findclumps_full(output_file='./output_directory/file_prefix')
                 kernels= np.arange(3, 20, 2),sextractor_param_file = 'default.sex',
