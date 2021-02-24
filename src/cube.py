@@ -638,18 +638,19 @@ class Cube:
 	def findclumps_1kernel(self, output_file, rms_region=1./4., minwidth = 3,sextractor_param_file = 'default.sex',
 				   clean_tmp= True,negative=False):
 		'''
-		  FINDCLUMP(s) algorithm (Decarli+2014). Takes the cube image and outputs the 3d (x,y,wavelength) position
+		  FINDCLUMP(s) algorithm (Decarli+2014,Walter+2016). Takes the cube image and outputs the 3d (x,y,wavelength) position
 		  of clumps of a minimum SN specified. Works by using a top-hat filter on a rebinned version of the datacube.
 		  :param output_file: relative/absolute path to the outpute catalogue
 		  :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord]. If none, takes the central
 		                  25% pixels (square)
 		  :param sn_threshold: Minimum SN of peaks to retain
 		  :param minwidth: Number of channels to bin
+		  :param clean_tmp: Whether to remove or not the temporary files created by Sextractor
 		  :return:
 		  '''
 
-		if not exists('./tmp/'):
-			os.system('mkdir ./tmp')
+		if not exists('./tmp_findclumps/'):
+			os.system('mkdir ./tmp_findclumps')
 
 		assert not (isfile(output_file)), 'Output file already exists - please delete or change name!'
 		if minwidth % 2 == 1:
@@ -676,12 +677,12 @@ class Cube:
 
 			hdu = fits.PrimaryHDU(data= im_channel_sum,header=self.head)
 			hdul = fits.HDUList([hdu])
-			hdul.writeto('./tmp/mask_' + str(k) + '.fits', overwrite=True)
+			hdul.writeto('./tmp_findclumps/mask_' + str(k) + '.fits', overwrite=True)
 
 			# run Sextractor
-			os.system('sex ./tmp/mask_' + str(k) + '.fits -c ' + sextractor_param_file)
+			os.system('sex ./tmp_findclumps/mask_' + str(k) + '.fits -c ' + sextractor_param_file)
 			if clean_tmp:
-				os.system('rm ./tmp/mask_' + str(k) + '.fits')
+				os.system('rm ./tmp_findclumps/mask_' + str(k) + '.fits')
 			sextractor_cat = np.genfromtxt('./target.list', skip_header=6)
 			if sextractor_cat.shape == (0,):
 				continue
@@ -714,10 +715,10 @@ class Cube:
 		:param rms_region: Region to compute the rms noise [2x2 array in image pixel coord]. If none, takes the central
 		                  25% pixels (square)
 		:param sn_threshold: Minimum SN of peaks to retain
-		:param minwidth: Number of channels to bin
+		:param minwidth: Number of channels to bin / a.k.a boxcar kernel size
 		:min_SNR: min SNR for final catalogues
-		:delta_offset_arcsec: maximum offset to match detections in the cube
-		:delta_freq: maximum frequency offset to match detections in the cube
+		:delta_offset_arcsec: maximum offset to match detections in the cube [arcsec]
+		:delta_freq: maximum frequency offset to match detections in the cube [GHz]
 		'''
 
 		for i in kernels:
