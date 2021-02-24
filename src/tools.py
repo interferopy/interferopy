@@ -594,7 +594,7 @@ def crop_doubles(cat_name,delta_offset_arcsec = 2, delta_freq = 0.1 ):
     for i in range(ncnt-2):
         ind= np.where([catalogue_final[:,-1] == i])[1]
         if len(ind)>1:
-            argmax_SN = np.argmax(catalogue_final[ind,4])
+            argmax_SN = np.argmax(catalogue_final[ind,5])
 
             catalogue_cropped_best[i,:] = catalogue_final[ind][argmax_SN]
         else:
