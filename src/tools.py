@@ -9,7 +9,17 @@ from astropy.cosmology import FlatLambdaCDM
 from astropy.io import fits
 from astropy import wcs
 from astropy.coordinates import SkyCoord
-
+from scipy.special import erf,erfinv
+from scipy.optimize import curve_fit
+from matplotlib import pyplot as plt
+import matplotlib as mpl
+mpl.rcParams['xtick.direction'] = 'in'
+mpl.rcParams['ytick.direction'] = 'in'
+mpl.rcParams['axes.linewidth'] = 1.5
+mpl.rcParams['xtick.major.size'] = 6
+mpl.rcParams['xtick.minor.size'] = 3.5
+mpl.rcParams['ytick.major.size'] = 6
+mpl.rcParams['ytick.minor.size'] = 3.5
 
 def sigfig(x, digits=2):
 	"""
@@ -612,3 +622,60 @@ def crop_doubles(cat_name,delta_offset_arcsec = 2, delta_freq = 0.1 ):
         catalogue_cropped_best_region.write('circle(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
                                             + ',0.5") \n  # text(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
                                             +')   text={' +'{:7.3f}'.format(x[2]) + '}\n')
+
+
+def fidelity_function(sn,sigma,c):
+    return 0.5*erf( (sn-c)/sigma ) + 0.5
+
+def fidelity_selection(cat_negative, cat_positive,max_SN=20,  plot_name = '',i_SN=5, fidelity_threshold= 0.6):
+	'''
+	Fidelity selection following Walter et al. 2016 (https://ui.adsabs.harvard.edu/abs/2016ApJ...833...67W/abstract) to
+	select clumps which are more likely to be positive than negative. Plot the selection and threshold if required.
+	:param cat_negative: Catalogue of negative clump detections
+	:param cat_positive: Catalogue of positive clump detections
+	:param i_SN: index of the SNR in the catalogues (if catalogues were produced by the internal interferopy findclumps
+	functiono i_SN =5)
+	:param max_SN: estimated maximum SN of clumps found in the cube
+	:param plot_name: if different than "" plot the fidelity function and threshold and save to given name
+	:fidelity_threshold: Fidelity threshold above which to select candidates
+	:return : Interpolated SN corresponding to the fidlity threshold chosen
+	'''
+	bins_edges = np.linspace(0, max_SN, 21)
+	bins = 0.5*(bins_edges[:-1] + bins_edges[1:])
+	hist_N, _ = np.histogram(cat_negative[:,int(i_SN)],bins=bins_edges)
+	hist_P, _ = np.histogram(cat_positive[:,int(i_SN)],bins=bins_edges)
+
+	### if low-SN clumps do not exist (due to Sextractor, cleaning, etc..), trim for cumulative hist to work properly:
+	ind_first_N_clump = int(np.where(hist_N > 0)[0][0])
+	hist_N = hist_N[ind_first_N_clump:]
+	hist_P = hist_P[ind_first_N_clump:]
+	bins = bins[ind_first_N_clump:]
+
+	fidelity = 1 - np.clip(np.nan_to_num(hist_N/(hist_P),nan=0),0,1)
+	popt,pcorr = curve_fit(fidelity_function, xdata=bins,ydata=fidelity,absolute_sigma=True)
+
+	sn_thres  = erfinv((fidelity_threshold-0.5)/0.5) * popt[0] + popt[1]
+	print(sn_thres)
+	if plot_name != '':
+		fig = plt.figure(figsize=(8,4))
+		ax1 = fig.add_subplot(211)
+		ax1.plot(bins,fidelity,linestyle='steps-mid')
+		ax1.fill_between(bins,fidelity,step="mid", alpha=0.4)
+		ax1.plot(np.linspace(0,10,200), fidelity_function(np.linspace(0,10,200),popt[0],popt[1]), color = 'firebrick')
+		plt.vlines(x=sn_thres,ymin=0,ymax=1.1,linestyles='--')
+		plt.xticks([])
+		plt.ylabel('Fidelity')
+		ax2 = fig.add_subplot(212)
+		ax2.plot(bins, hist_N, linestyle='steps-mid')
+		ax2.set_yscale('log')
+		ax2.fill_between(bins, hist_N, step="mid", alpha=0.4)
+		plt.vlines(x=sn_thres,ymin=0,ymax=np.max(hist_N)*1.1,linestyles='--')
+		plt.ylabel(r'$\log N_{\rm{pos}}$')
+		plt.xlabel('S/N')
+
+		plt.subplots_adjust(wspace=None, hspace=None)
+
+		plt.savefig(plot_name+'.pdf',bbox_inches="tight", dpi=600 )
+		plt.close()
+
+	return sn_thres
