@@ -686,6 +686,8 @@ class Cube:
 			sextractor_cat = np.genfromtxt('./target.list', skip_header=6)
 			if sextractor_cat.shape == (0,):
 				continue
+			elif len(sextractor_cat.shape)==1:
+				sextractor_cat = sextractor_cat.reshape((-1,6))
 			# append k , rms, freq to sextractor_cat
 			sextractor_cat = np.hstack([sextractor_cat, np.ones((len(sextractor_cat), 1)) * k,
 										np.ones((len(sextractor_cat), 1)) * rms,
