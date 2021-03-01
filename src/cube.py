@@ -424,7 +424,7 @@ class Cube:
 			if channel is not None:
 				npix = np.array([np.sum(np.isfinite(self.im[:, :, channel][w]))])
 				flux = np.array([np.nansum(self.im[:, :, channel][w]) / self.beamvol[channel]])
-				peak_sb =  np.array([np.nanmax(self.im[:, :, channel][w]) ])
+				peak_sb =  np.array([np.nanmax(self.im[:, :, channel][w]/ self.beamvol[channel]) ])
 				if calc_error:
 					err = np.array(self.rms[channel] * np.sqrt(npix / self.beamvol[channel]))
 				else:
@@ -435,7 +435,7 @@ class Cube:
 				npix = np.zeros(self.nch)
 				for i in range(self.nch):
 					flux[i] = np.nansum(self.im[:, :, i][w]) / self.beamvol[i]
-					peak_sb[i] = np.nanmax(self.im[:, :, i][w])
+					peak_sb[i] = np.nanmax(self.im[:, :, i][w]/ self.beamvol[i])
 					npix[i] = np.sum(np.isfinite(self.im[:, :, i][w]))
 				if calc_error:
 					err = np.array(self.rms * np.sqrt(npix / self.beamvol))
