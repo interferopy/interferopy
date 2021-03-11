@@ -480,7 +480,7 @@ def line_stats_sextractor(catalogue, binning,SNR_min=5):
     # By definition, the output of findclumps is
     # SNR_WIN FLUX_MAX X_IMAGE Y_IMAGE RA(J2000,deg) DEC(J2000,deg) Center_channel RMS
     snr = catalogue[:,1] / catalogue[:,7]
-    freq_GHz = catalogue[:,8]/1e9
+    freq_GHz = catalogue[:,8] # catalogue from interferopy.Cube is already in GHz!
 
     ind_high_SN = np.where(snr>SNR_min)[0]
 
