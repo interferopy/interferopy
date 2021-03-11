@@ -424,7 +424,7 @@ class Cube:
 			if channel is not None:
 				npix = np.array([np.sum(np.isfinite(self.im[:, :, channel][w]))])
 				flux = np.array([np.nansum(self.im[:, :, channel][w]) / self.beamvol[channel]])
-				peak_sb =  np.array([np.nanmax(self.im[:, :, channel][w]/ self.beamvol[channel]) ])
+				peak_sb =  np.nanmax(self.im[:, :, channel][w])
 				if calc_error:
 					err = np.array(self.rms[channel] * np.sqrt(npix / self.beamvol[channel]))
 				else:
@@ -435,7 +435,7 @@ class Cube:
 				npix = np.zeros(self.nch)
 				for i in range(self.nch):
 					flux[i] = np.nansum(self.im[:, :, i][w]) / self.beamvol[i]
-					peak_sb[i] = np.nanmax(self.im[:, :, i][w]/ self.beamvol[i])
+					peak_sb[i] = np.nanmax(self.im[:, :, i][w])
 					npix[i] = np.sum(np.isfinite(self.im[:, :, i][w]))
 				if calc_error:
 					err = np.array(self.rms * np.sqrt(npix / self.beamvol))
@@ -660,20 +660,20 @@ class Cube:
 			chnbox = int(minwidth / 2.0)
 
 		if negative:
-			cube = -self.im
+			cube = -self.im.T # sextractor expects the counter-intuitive freq,dec,ra order (because the header has not been changed)
 		else:
-			cube = self.im
+			cube = self.im.T # sextractor expects the counter-intuitive freq,dec,ra order (because the header has not been changed)
 
 		nax1 = cube.shape[0]
 		nax2 = cube.shape[1]
 		nax3 = cube.shape[2]
-
-		for k in range(chnbox, nax3 - chnbox - 1):
+		print(nax1,nax2,nax3,len(self.freqs))
+		for k in range(chnbox, nax1 - chnbox - 1):
 			# collapsing cube over chosen channel number, saving rms in center
-			im_channel_sum = np.nansum(cube[:, :, k - chnbox:k + chnbox + 1], axis=-1)
+			im_channel_sum = np.nansum(cube[k - chnbox:k + chnbox + 1,:, :], axis=0)
 			rms = np.nanstd(
 				im_channel_sum[int(nax2 / 2) - int(nax2 * rms_region) - 1:int(nax2 / 2) + int(nax2 * rms_region),
-				int(nax1 / 2) - int(nax1 * rms_region) - 1:int(nax1 / 2) + int(nax1 * rms_region)])
+				int(nax3 / 2) - int(nax3 * rms_region) - 1:int(nax3 / 2) + int(nax3 * rms_region)])
 
 			hdu = fits.PrimaryHDU(data= im_channel_sum,header=self.head)
 			hdul = fits.HDUList([hdu])
@@ -702,7 +702,7 @@ class Cube:
 		                #   6 DELTA_J2000            Declination of barycenter (J2000)                          [deg] \n \
 		                #   7 k                      Central Channel                                            [pixel] \n \
 		                #   8 RMS                    RMS of collapsed channel map                               [Jy/beam] \n \
-		                #   9 FREQ                   CENTRAL FREQUENCY                                          [Hz] ")
+		                #   9 FREQ                   CENTRAL FREQUENCY [GHz]                                         [Hz] ")
 			else:
 				with open(output_file + '_kw' + str(int(minwidth)) + '.cat', "ab") as f:
 					np.savetxt(fname=f, X=sextractor_cat)
@@ -1038,7 +1038,7 @@ class MultiCube:
 		# corrected flux is estimated from the dirty map and the clean-to-dirty beam ratio (epsilon)
 		flux = epsilon_fix * flux_dirty
 		err = epsilon_fix * err
-		peak_sb = epsilon_fix * peak_sb
+		peak_sb = peak_sb
 
 		# apply PB correction if possible
 		if apply_pb_corr and "pb" in self.loaded_cubes:
