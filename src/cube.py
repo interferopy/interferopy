@@ -675,7 +675,7 @@ class Cube:
 				im_channel_sum[int(nax2 / 2) - int(nax2 * rms_region) - 1:int(nax2 / 2) + int(nax2 * rms_region),
 				int(nax3 / 2) - int(nax3 * rms_region) - 1:int(nax3 / 2) + int(nax3 * rms_region)])
 
-			hdu = fits.PrimaryHDU(data= im_channel_sum,header=self.head)
+			hdu = fits.PrimaryHDU(data=im_channel_sum.T, header=self.head)
 			hdul = fits.HDUList([hdu])
 			hdul.writeto('./tmp_findclumps/mask_' + str(k) + '.fits', overwrite=True)
 
