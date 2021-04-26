@@ -4,31 +4,31 @@ from astropy.io import fits
 from astropy.table import Table
 from astropy import wcs
 import scipy.constants as const
-from os.path import isfile,exists
+from os.path import isfile, exists
 
 import interferopy.tools as tools
 
 
 class Cube:
 	"""
-	Cube object represents interferometric data such as a map (2D) or a cube (3D).
-	Allows performing tasks such as aperture integration or spectrum extraction.
-	It is instantiated by reading in a fits file.
+    Cube object represents interferometric data such as a map (2D) or a cube (3D).
+    Allows performing tasks such as aperture integration or spectrum extraction.
+    It is instantiated by reading in a fits file.
 
-	Example:
-		filename="cube.image.fits"
-		ra, dec, freq = (205.533741, 9.477317341, 222.54) # coord for the emission line
-		c=Cube(filename)
-		# spectrum from the circular aperture, with associated error
-		flux, err, _ = c.spectrum(ra=ra, dec=dec, radius=1.5, calc_error=True)
-		# curve of growth up to the maximum radius, in steps of one pixel, in a chosen frequency channel
-		radius, flux, err, _ = c.growing_aperture(ra=ra, dec=dec, freq=freq, maxradius=5, calc_error=True)
-	"""
+    Example:
+        filename="cube.image.fits"
+        ra, dec, freq = (205.533741, 9.477317341, 222.54) # coord for the emission line
+        c=Cube(filename)
+        # spectrum from the circular aperture, with associated error
+        flux, err, _ = c.spectrum(ra=ra, dec=dec, radius=1.5, calc_error=True)
+        # curve of growth up to the maximum radius, in steps of one pixel, in a chosen frequency channel
+        radius, flux, err, _ = c.growing_aperture(ra=ra, dec=dec, freq=freq, maxradius=5, calc_error=True)
+    """
 
 	def __init__(self, filename: str):
 		"""
-		:param filename: Path string to the fits image.
-		"""
+        :param filename: Path string to the fits image.
+        """
 		if os.path.exists(filename):
 			self.filename = filename
 			self.hdu = None
@@ -72,8 +72,8 @@ class Cube:
 
 	def __load_fitsfile(self):
 		"""
-		Read the fits file and extract common useful data into Cube class attributes.
-		"""
+        Read the fits file and extract common useful data into Cube class attributes.
+        """
 		self.log("Open " + self.filename)
 		self.hdu = fits.open(self.filename)
 		self.head = self.hdu[0].header
@@ -122,7 +122,8 @@ class Cube:
 			nch = self.im.shape[2]  # number of (freq) channels in the cube
 			# if frequencies are already 3rd axis
 			if str(self.head["CTYPE3"]).strip().lower() == "freq":
-				_, _, freqs = self.wcs.all_pix2world(int(self.im.shape[0] / 2), int(self.im.shape[1] / 2), range(nch), 0)
+				_, _, freqs = self.wcs.all_pix2world(int(self.im.shape[0] / 2), int(self.im.shape[1] / 2), range(nch),
+													 0)
 				freqs *= 1e-9  # in GHz
 				self.deltafreq = self.head["CDELT3"] * 1e-9
 				self.reffreq = self.head["CRVAL3"] * 1e-9
@@ -187,17 +188,17 @@ class Cube:
 
 	def log(self, text: str):
 		"""
-		Basic logger function to allow better functionality in the future development.
-		All class functions print info through this wrapper.
-		Could be extended to provide different levels of info, timestamps, or logging to a file.
-		"""
+        Basic logger function to allow better functionality in the future development.
+        All class functions print info through this wrapper.
+        Could be extended to provide different levels of info, timestamps, or logging to a file.
+        """
 		print(text)
 
 	def get_rms(self):
 		"""
-		Calculate rms for each channel of the cube. Can take some time to compute on large cubes.
-		:return: single rms value if 2D, array odf rms values for each channel if 3D cube
-		"""
+        Calculate rms for each channel of the cube. Can take some time to compute on large cubes.
+        :return: single rms value if 2D, array odf rms values for each channel if 3D cube
+        """
 		# TODO: maybe add the option to calculate a single channel only?
 		if self.__rms is None:
 			# calc rms per channel
@@ -219,10 +220,10 @@ class Cube:
 
 	def deltavel(self, reffreq: float = None):
 		"""
-		Compute channel width in velocity units (km/s).
-		:param reffreq: Computed around specific velocity. If empty, use referent one from the header.
-		:return: Channel width in km/s. Sign reflects how channels are ordered.
-		"""
+        Compute channel width in velocity units (km/s).
+        :param reffreq: Computed around specific velocity. If empty, use referent one from the header.
+        :return: Channel width in km/s. Sign reflects how channels are ordered.
+        """
 
 		if reffreq is None:
 			reffreq = self.reffreq
@@ -231,10 +232,10 @@ class Cube:
 
 	def vels(self, reffreq: float):
 		"""
-		Compute velocities of all cube channels for a given reference frequency.
-		:param reffreq: Reference frequency in GHz. If empty, use referent one from the header.
-		:return: Velocities in km/s.
-		"""
+        Compute velocities of all cube channels for a given reference frequency.
+        :param reffreq: Reference frequency in GHz. If empty, use referent one from the header.
+        :return: Velocities in km/s.
+        """
 
 		if reffreq is None:
 			reffreq = self.reffreq
@@ -243,13 +244,13 @@ class Cube:
 
 	def radec2pix(self, ra=None, dec=None, integer=True):
 		"""
-		Convert ra and dec coordinates into pixels to be used as im[px, py].
-		If no coords are given, the center of the map is assumed.
-		:param ra: Right ascention in degrees. Or list.
-		:param dec: Declination in degrees. Or list.
-		:param integer: Round the coordinate to an integer value (to be used as indices).
-		:return: Coords x and y in pixels (0 based index).
-		"""
+        Convert ra and dec coordinates into pixels to be used as im[px, py].
+        If no coords are given, the center of the map is assumed.
+        :param ra: Right ascention in degrees. Or list.
+        :param dec: Declination in degrees. Or list.
+        :param integer: Round the coordinate to an integer value (to be used as indices).
+        :return: Coords x and y in pixels (0 based index).
+        """
 
 		# use the central pixel if no coords given
 		if ra is None or dec is None:
@@ -271,12 +272,12 @@ class Cube:
 
 	def pix2radec(self, px=None, py=None):
 		"""
-		Convert pixels coordinates into ra and dec.
-		If no coords are given, the center of the map is assumed.
-		:param px: X-axis index. Or list.
-		:param py: Y-axis index. Or list.
-		:return: Coords ra, dec in degrees
-		"""
+        Convert pixels coordinates into ra and dec.
+        If no coords are given, the center of the map is assumed.
+        :param px: X-axis index. Or list.
+        :param py: Y-axis index. Or list.
+        :return: Coords ra, dec in degrees
+        """
 		if px is None or py is None:
 			px = self.im.shape[0] / 2
 			py = self.im.shape[1] / 2
@@ -290,10 +291,10 @@ class Cube:
 
 	def freq2pix(self, freq: float = None):
 		"""
-		Get the channel number of requested frequency.
-		:param freq: Frequency in GHz.
-		:return: Channel index.
-		"""
+        Get the channel number of requested frequency.
+        :param freq: Frequency in GHz.
+        :return: Channel index.
+        """
 
 		if len(self.wcs.axis_type_names) < 3:
 			raise ValueError("No frequency axis is present.")
@@ -323,11 +324,11 @@ class Cube:
 
 	def pix2freq(self, pz: int = None):
 		"""
-		Get the frequency of a given channel.
-		If no channel is given, the center channel is assumed.
-		:param pz: Channel index.
-		:return: Frequency in GHz.
-		"""
+        Get the frequency of a given channel.
+        If no channel is given, the center channel is assumed.
+        :param pz: Channel index.
+        :return: Frequency in GHz.
+        """
 
 		if len(self.wcs.axis_type_names) < 3:
 			raise ValueError("No frequency axis is present.")
@@ -345,10 +346,10 @@ class Cube:
 
 	def im2d(self, ch: int = 0):
 		"""
-		Get the 2D map. Convenience function to avoid indexing notation.
-		:param ch: Channel index.
-		:return: 2D numpy array.
-		"""
+        Get the 2D map. Convenience function to avoid indexing notation.
+        :param ch: Channel index.
+        :return: 2D numpy array.
+        """
 		if ch < 0 or ch >= self.nch:
 			raise ValueError("Requested channel is outside of the available range.")
 			return None
@@ -357,13 +358,13 @@ class Cube:
 
 	def distance_grid(self, px: float, py: float) -> np.ndarray:
 		"""
-		Grid of distances from the chosen pixel (can be subpixel accuracy).
-		Uses small angle approximation (simple Pythagorean distances).
-		Distances are measured in numbers of pixels.
-		:param px: Index of x coord.
-		:param py: Index of y coord.
-		:return: 2D grid of distances in pixels, same shape as the cube slice
-		"""
+        Grid of distances from the chosen pixel (can be subpixel accuracy).
+        Uses small angle approximation (simple Pythagorean distances).
+        Distances are measured in numbers of pixels.
+        :param px: Index of x coord.
+        :param py: Index of y coord.
+        :return: 2D grid of distances in pixels, same shape as the cube slice
+        """
 
 		xxx = np.arange(self.im.shape[0])
 		yyy = np.arange(self.im.shape[1])
@@ -372,26 +373,26 @@ class Cube:
 
 	def spectrum(self, ra: float = None, dec: float = None, radius=0.0,
 				 px: int = None, py: int = None, channel: int = None, freq: float = None, calc_error=False) \
-			-> (np.ndarray, np.ndarray, np.ndarray,np.ndarray):
+			-> (np.ndarray, np.ndarray, np.ndarray, np.ndarray):
 		"""
-		Extract the spectrum (for 3D cube) or a single flux density value (for 2D map) at a given coord (ra, dec)
-		integrated within a circular aperture of a given radius.
-		Coordinates can be given in degrees (ra, dec) or pixels (px, py).
-		If no coordinates are given, the center of the map is assumed.
-		Single plane can be chosen instead of full spectrum by defining freq or channel.
-		If no radius is given, a single pixel value is extracted (usual units Jy/beam), otherwise aperture
-		integrated spectrum is extracted (usual units of Jy).
-		Note: use the freqs field (or velocities method) to get the x-axis values.
-		:param ra: Right ascention in degrees.
-		:param dec: Declination in degrees.
-		:param radius: Circular aperture radius in arcsec.
-		:param px: Right ascention pixel coord.
-		:param py: Declination pixel coord.
-		:param channel: Force extracton in a single channel of provided index (instead of the full cube).
-		:param freq: Frequency in GHz (alternative to channel).
-		:param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
-		:return: flux, err, npix: flux (spectrum), error estimate, and number of pixels in the aperture
-		"""
+        Extract the spectrum (for 3D cube) or a single flux density value (for 2D map) at a given coord (ra, dec)
+        integrated within a circular aperture of a given radius.
+        Coordinates can be given in degrees (ra, dec) or pixels (px, py).
+        If no coordinates are given, the center of the map is assumed.
+        Single plane can be chosen instead of full spectrum by defining freq or channel.
+        If no radius is given, a single pixel value is extracted (usual units Jy/beam), otherwise aperture
+        integrated spectrum is extracted (usual units of Jy).
+        Note: use the freqs field (or velocities method) to get the x-axis values.
+        :param ra: Right ascention in degrees.
+        :param dec: Declination in degrees.
+        :param radius: Circular aperture radius in arcsec.
+        :param px: Right ascention pixel coord.
+        :param py: Declination pixel coord.
+        :param channel: Force extracton in a single channel of provided index (instead of the full cube).
+        :param freq: Frequency in GHz (alternative to channel).
+        :param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
+        :return: flux, err, npix: flux (spectrum), error estimate, and number of pixels in the aperture
+        """
 
 		if px is None or py is None:
 			px, py = self.radec2pix(ra, dec)
@@ -424,7 +425,7 @@ class Cube:
 			if channel is not None:
 				npix = np.array([np.sum(np.isfinite(self.im[:, :, channel][w]))])
 				flux = np.array([np.nansum(self.im[:, :, channel][w]) / self.beamvol[channel]])
-				peak_sb =  np.nanmax(self.im[:, :, channel][w])
+				peak_sb = np.nanmax(self.im[:, :, channel][w])
 				if calc_error:
 					err = np.array(self.rms[channel] * np.sqrt(npix / self.beamvol[channel]))
 				else:
@@ -447,15 +448,15 @@ class Cube:
 	def single_pixel_value(self, ra: float = None, dec: float = None, freq: float = None,
 						   channel: int = None, calc_error: bool = False):
 		"""
-		Get a single pixel value at the given coord. Optionally, return associated error.
-		Wrapper function for the "spectrum" method. If None, assumes central pixel.
-		:param ra: Right ascention in degrees.
-		:param dec: Declination in degrees.
-		:param freq: Frequency in GHz. If None, computes whole spectrum.
-		:param channel: Channel index (alternative to freq).
-		:param calc_error: If true, returns also an error estimate (rms).
-		:return: value or (value, error)
-		"""
+        Get a single pixel value at the given coord. Optionally, return associated error.
+        Wrapper function for the "spectrum" method. If None, assumes central pixel.
+        :param ra: Right ascention in degrees.
+        :param dec: Declination in degrees.
+        :param freq: Frequency in GHz. If None, computes whole spectrum.
+        :param channel: Channel index (alternative to freq).
+        :param calc_error: If true, returns also an error estimate (rms).
+        :return: value or (value, error)
+        """
 
 		spec, err, _ = self.spectrum(ra=ra, dec=dec, radius=0, freq=freq, channel=channel, calc_error=calc_error)
 		if calc_error:
@@ -466,16 +467,16 @@ class Cube:
 	def aperture_value(self, ra: float = None, dec: float = None, freq: float = None, channel: int = None,
 					   radius: float = 1.0, calc_error=False):
 		"""
-		Get an aperture integrated value at the given coord. Optionally, return associated error.
-		Wrapper function for the "spectrum" method.
-		:param ra: Right ascention in degrees. If None, assumes central pixel.
-		:param dec: Declination in degrees.
-		:param freq: Frequency in GHz. If None, computes whole spectrum.
-		:param channel: Channel index (alternative to freq).
-		:param radius: Aperture radius in arcsec.
-		:param calc_error: If true, returns also an error estimate (rms x sqrt(num of beams in aperture)).
-		:return: value or (value, error)
-		"""
+        Get an aperture integrated value at the given coord. Optionally, return associated error.
+        Wrapper function for the "spectrum" method.
+        :param ra: Right ascention in degrees. If None, assumes central pixel.
+        :param dec: Declination in degrees.
+        :param freq: Frequency in GHz. If None, computes whole spectrum.
+        :param channel: Channel index (alternative to freq).
+        :param radius: Aperture radius in arcsec.
+        :param calc_error: If true, returns also an error estimate (rms x sqrt(num of beams in aperture)).
+        :return: value or (value, error)
+        """
 
 		flux, err, _ = self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=channel, calc_error=calc_error)
 		if calc_error:
@@ -489,24 +490,24 @@ class Cube:
 						 profile=False, calc_error=False) \
 			-> (np.ndarray, np.ndarray, np.ndarray, np.ndarray):
 		"""
-		Compute curve of growth at the given coordinate position in a circular aperture, growing up to the max radius.
-		Coordinates can be given in degrees (ra, dec) or pixels (px, py).
-		If no coordinates are given, the center of the map is assumed.
-		If no channel is provided, the first one is assumed.
-		:param ra: Right ascention in degrees.
-		:param dec: Declination in degrees.
-		:param freq: Frequency in GHz, takes precedence over channel param.
-		:param maxradius: Max radius for aperture integration in arcsec.
-		:param binspacing: Resolution of the growth flux curve in arcsec, default is one pixel size.
-		:param bins: Custom bins for curve growth (1D np array).
-		:param px: Right ascention pixel coord (alternative to ra).
-		:param py: Declination pixel coord (alternative to dec).
-		:param channel: Index of the cube channel to take (alternative to freq).
-		:param profile: If True, compute azimuthally averaged profile, if False, compute cumulative aperture values
-		:param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
-		:return: radius, flux, err, npix - all 1D numpy arrays: aperture radius, cumulative flux within it,
-		associated Poissionain error (based on number of beams inside the aprture and the map rms), number of pixels
-		"""
+        Compute curve of growth at the given coordinate position in a circular aperture, growing up to the max radius.
+        Coordinates can be given in degrees (ra, dec) or pixels (px, py).
+        If no coordinates are given, the center of the map is assumed.
+        If no channel is provided, the first one is assumed.
+        :param ra: Right ascention in degrees.
+        :param dec: Declination in degrees.
+        :param freq: Frequency in GHz, takes precedence over channel param.
+        :param maxradius: Max radius for aperture integration in arcsec.
+        :param binspacing: Resolution of the growth flux curve in arcsec, default is one pixel size.
+        :param bins: Custom bins for curve growth (1D np array).
+        :param px: Right ascention pixel coord (alternative to ra).
+        :param py: Declination pixel coord (alternative to dec).
+        :param channel: Index of the cube channel to take (alternative to freq).
+        :param profile: If True, compute azimuthally averaged profile, if False, compute cumulative aperture values
+        :param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
+        :return: radius, flux, err, npix - all 1D numpy arrays: aperture radius, cumulative flux within it,
+        associated Poissionain error (based on number of beams inside the aprture and the map rms), number of pixels
+        """
 		self.log("Running growth_curve.")
 
 		# get coordinates in pixels
@@ -574,12 +575,12 @@ class Cube:
 				   px: int = None, py: int = None, channel: int = 0,
 				   maxradius: float = 1.0, binspacing: float = None, bins: list = None, calc_error: bool = False):
 		"""
-		Obtain integrated flux within a circular aperture as a function of radius.
-		If freq is undefined, will return the spectrum of the 3D cube.
-		Alias function. Check the "growing_aperture" method for details.
-		Units: ra[deg], dec[deg], maxradius[arcsec], binspacing[arcsec], freq[GHz]
-		:return: (radius, flux) or (radius, flux, err) if calc_error
-		"""
+        Obtain integrated flux within a circular aperture as a function of radius.
+        If freq is undefined, will return the spectrum of the 3D cube.
+        Alias function. Check the "growing_aperture" method for details.
+        Units: ra[deg], dec[deg], maxradius[arcsec], binspacing[arcsec], freq[GHz]
+        :return: (radius, flux) or (radius, flux, err) if calc_error
+        """
 
 		radius, flux, err, npix = self.growing_aperture(ra=ra, dec=dec, freq=freq,
 														maxradius=maxradius, binspacing=binspacing, bins=bins,
@@ -595,15 +596,15 @@ class Cube:
 				  maxradius: float = 1.0, binspacing: float = None, bins: list = None,
 				  calc_error: bool = False):
 		"""
-		Obtain azimuthaly averaged profile as a function of radius.
-		Alias function. Check the "growing_aperture" method for details.
-		Units: ra[deg], dec[deg], maxradius[arcsec], binspacing[arcsec], freq[GHz]
-		:return: (radius, profile) or (radius, profile err) if calc_error
-		"""
+        Obtain azimuthaly averaged profile as a function of radius.
+        Alias function. Check the "growing_aperture" method for details.
+        Units: ra[deg], dec[deg], maxradius[arcsec], binspacing[arcsec], freq[GHz]
+        :return: (radius, profile) or (radius, profile err) if calc_error
+        """
 		radius, profile, err, npix = self.growing_aperture(ra=ra, dec=dec, freq=freq,
-														maxradius=maxradius, binspacing=binspacing, bins=bins,
-														px=px, py=py, channel=channel,
-														profile=True, calc_error=calc_error)
+														   maxradius=maxradius, binspacing=binspacing, bins=bins,
+														   px=px, py=py, channel=channel,
+														   profile=True, calc_error=calc_error)
 		if calc_error:
 			return radius, profile, err
 		else:
@@ -613,11 +614,11 @@ class Cube:
 
 	def save_fitsfile(self, filename: str = None, overwrite=False):
 		"""
-		Save the cube in a fits file by storing the image and the header.
-		:param filename: Path string to the output file. Uses input filename by default
-		:param overwrite: False by default.
-		:return:
-		"""
+        Save the cube in a fits file by storing the image and the header.
+        :param filename: Path string to the output file. Uses input filename by default
+        :param overwrite: False by default.
+        :return:
+        """
 
 		if filename is None and self.filename is None:
 			raise ValueError("No filename was provided.")
@@ -635,19 +636,19 @@ class Cube:
 		fits.writeto(filename, self.im.T, self.head, overwrite=overwrite)
 		self.log("Fits file saved to " + filename)
 
-	def findclumps_1kernel(self, output_file, rms_region=1./4., minwidth = 3,sextractor_param_file = 'default.sex',
-				   clean_tmp= True,negative=False):
-		'''
-		  FINDCLUMP(s) algorithm (Decarli+2014,Walter+2016). Takes the cube image and outputs the 3d (x,y,wavelength) position
-		  of clumps of a minimum SN specified. Works by using a top-hat filter on a rebinned version of the datacube.
-		  :param output_file: relative/absolute path to the outpute catalogue
-		  :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord]. If none, takes the central
-		                  25% pixels (square)
-		  :param sn_threshold: Minimum SN of peaks to retain
-		  :param minwidth: Number of channels to bin
-		  :param clean_tmp: Whether to remove or not the temporary files created by Sextractor
-		  :return:
-		  '''
+		def findclumps_1kernel(self, output_file, rms_region=1. / 4., minwidth=3, sextractor_param_file='default.sex',
+							   clean_tmp=True, negative=False):
+			'''
+            FINDCLUMP(s) algorithm (Decarli+2014,Walter+2016). Takes the cube image and outputs the 3d (x,y,wavelength) position
+            of clumps of a minimum SN specified. Works by using a top-hat filter on a rebinned version of the datacube.
+            :param output_file: relative/absolute path to the outpute catalogue
+            :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord]. If none, takes the central
+                          25% pixels (square)
+            :param sn_threshold: Minimum SN of peaks to retain
+            :param minwidth: Number of channels to bin
+            :param clean_tmp: Whether to remove or not the temporary files created by Sextractor
+            :return:
+            '''
 
 		if not exists('./tmp_findclumps/'):
 			os.system('mkdir ./tmp_findclumps')
@@ -659,35 +660,35 @@ class Cube:
 			print('WARNING: Window must be odd number of channels, using minwidth +1')
 			chnbox = int(minwidth / 2.0)
 
-		if negative:
-			cube = -self.im.T # sextractor expects the counter-intuitive freq,dec,ra order (because the header has not been changed)
-		else:
-			cube = self.im.T # sextractor expects the counter-intuitive freq,dec,ra order (because the header has not been changed)
+			if negative:
+				cube = -self.im.T  # sextractor expects the counter-intuitive freq,dec,ra order (because the header has not been changed)
+			else:
+				cube = self.im.T  # sextractor expects the counter-intuitive freq,dec,ra order (because the header has not been changed)
 
-		nax1 = cube.shape[0]
-		nax2 = cube.shape[1]
-		nax3 = cube.shape[2]
-		print(nax1,nax2,nax3,len(self.freqs))
-		for k in range(chnbox, nax1 - chnbox - 1):
-			# collapsing cube over chosen channel number, saving rms in center
-			im_channel_sum = np.nansum(cube[k - chnbox:k + chnbox + 1,:, :], axis=0)
-			rms = np.nanstd(
-				im_channel_sum[int(nax2 / 2) - int(nax2 * rms_region) - 1:int(nax2 / 2) + int(nax2 * rms_region),
-				int(nax3 / 2) - int(nax3 * rms_region) - 1:int(nax3 / 2) + int(nax3 * rms_region)])
+			nax1 = cube.shape[0]
+			nax2 = cube.shape[1]
+			nax3 = cube.shape[2]
+			print(nax1, nax2, nax3, len(self.freqs))
+			for k in range(chnbox, nax1 - chnbox - 1):
+				# collapsing cube over chosen channel number, saving rms in center
+				im_channel_sum = np.nansum(cube[k - chnbox:k + chnbox + 1, :, :], axis=0)
+				rms = np.nanstd(
+					im_channel_sum[int(nax2 / 2) - int(nax2 * rms_region) - 1:int(nax2 / 2) + int(nax2 * rms_region),
+					int(nax3 / 2) - int(nax3 * rms_region) - 1:int(nax3 / 2) + int(nax3 * rms_region)])
 
-			hdu = fits.PrimaryHDU(data= im_channel_sum,header=self.head)
-			hdul = fits.HDUList([hdu])
-			hdul.writeto('./tmp_findclumps/mask_' + str(k) + '.fits', overwrite=True)
+				hdu = fits.PrimaryHDU(data=im_channel_sum, header=self.head)
+				hdul = fits.HDUList([hdu])
+				hdul.writeto('./tmp_findclumps/mask_' + str(k) + '.fits', overwrite=True)
 
-			# run Sextractor
-			os.system('sex ./tmp_findclumps/mask_' + str(k) + '.fits -c ' + sextractor_param_file)
-			if clean_tmp:
-				os.system('rm ./tmp_findclumps/mask_' + str(k) + '.fits')
-			sextractor_cat = np.genfromtxt('./target.list', skip_header=6)
-			if sextractor_cat.shape == (0,):
-				continue
-			elif len(sextractor_cat.shape)==1:
-				sextractor_cat = sextractor_cat.reshape((-1,6))
+				# run Sextractor
+				os.system('sex ./tmp_findclumps/mask_' + str(k) + '.fits -c ' + sextractor_param_file)
+				if clean_tmp:
+					os.system('rm ./tmp_findclumps/mask_' + str(k) + '.fits')
+				sextractor_cat = np.genfromtxt('./target.list', skip_header=6)
+				if sextractor_cat.shape == (0,):
+					continue
+				elif len(sextractor_cat.shape) == 1:
+					sextractor_cat = sextractor_cat.reshape((-1, 6))
 			# append k , rms, freq to sextractor_cat
 			sextractor_cat = np.hstack([sextractor_cat, np.ones((len(sextractor_cat), 1)) * k,
 										np.ones((len(sextractor_cat), 1)) * rms,
@@ -707,75 +708,78 @@ class Cube:
 				with open(output_file + '_kw' + str(int(minwidth)) + '.cat', "ab") as f:
 					np.savetxt(fname=f, X=sextractor_cat)
 
-	def findclumps_full(self,output_file, kernels= np.arange(3, 20, 2), rms_region=1./4.,
-						sextractor_param_file = 'default.sex',clean_tmp= True, min_SNR=0,
-						delta_offset_arcsec=2,delta_freq=0.1):
+	def findclumps_full(self, output_file, kernels=np.arange(3, 20, 2), rms_region=1. / 4.,
+						sextractor_param_file='default.sex', clean_tmp=True, min_SNR=0,
+						delta_offset_arcsec=2, delta_freq=0.1):
 		'''
-		Run the findclump search for different kernels sizes, on both the negative and positive cubes.
-		Crops doubles and trim candidates above a mininum SNR. See findclumps_1kernel().
-		:param output_file: relative/absolute path to the outpute catalogue
-		:param rms_region: Region to compute the rms noise [2x2 array in image pixel coord]. If none, takes the central
-		                  25% pixels (square)
-		:param sn_threshold: Minimum SN of peaks to retain
-		:param minwidth: Number of channels to bin / a.k.a boxcar kernel size
-		:min_SNR: min SNR for final catalogues
-		:delta_offset_arcsec: maximum offset to match detections in the cube [arcsec]
-		:delta_freq: maximum frequency offset to match detections in the cube [GHz]
-		'''
+        Run the findclump search for different kernels sizes, on both the negative and positive cubes.
+        Crops doubles and trim candidates above a mininum SNR. See findclumps_1kernel().
+        :param output_file: relative/absolute path to the outpute catalogue
+        :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord]. If none, takes the central
+                          25% pixels (square)
+        :param sn_threshold: Minimum SN of peaks to retain
+        :param minwidth: Number of channels to bin / a.k.a boxcar kernel size
+        :min_SNR: min SNR for final catalogues
+        :delta_offset_arcsec: maximum offset to match detections in the cube [arcsec]
+        :delta_freq: maximum frequency offset to match detections in the cube [GHz]
+        '''
 
 		for i in kernels:
-			self.findclumps_1kernel( output_file=output_file + '_clumpsP',negative=False, minwidth=i,clean_tmp=clean_tmp,
-							 rms_region=rms_region,sextractor_param_file=sextractor_param_file)
-			self.findclumps_1kernel( output_file=output_file + '_clumpsN',negative=True, minwidth=i,clean_tmp=clean_tmp,
-							 rms_region=rms_region,sextractor_param_file=sextractor_param_file)
+			self.findclumps_1kernel(output_file=output_file + '_clumpsP', negative=False, minwidth=i,
+									clean_tmp=clean_tmp,
+									rms_region=rms_region, sextractor_param_file=sextractor_param_file)
+			self.findclumps_1kernel(output_file=output_file + '_clumpsN', negative=True, minwidth=i,
+									clean_tmp=clean_tmp,
+									rms_region=rms_region, sextractor_param_file=sextractor_param_file)
 
 		tools.run_line_stats_sex(sextractor_pos_catalogue_name=output_file + '_clumpsP',
-						   sextractor_neg_catalogue_name=output_file + '_clumpsN',
-						   binning_array=kernels, SNR_min=min_SNR)
+								 sextractor_neg_catalogue_name=output_file + '_clumpsN',
+								 binning_array=kernels, SNR_min=min_SNR)
 
-		tools.crop_doubles(cat_name=output_file+ "_clumpsP_minSNR_"+str(min_SNR)+".out",
-						   delta_offset_arcsec = delta_offset_arcsec,delta_freq = delta_freq)
+		tools.crop_doubles(cat_name=output_file + "_clumpsP_minSNR_" + str(min_SNR) + ".out",
+						   delta_offset_arcsec=delta_offset_arcsec, delta_freq=delta_freq)
 
-		tools.crop_doubles(cat_name=output_file + "_clumpsN_minSNR_"+str(min_SNR)+".out",
-						   delta_offset_arcsec = delta_offset_arcsec,delta_freq = delta_freq)
+		tools.crop_doubles(cat_name=output_file + "_clumpsN_minSNR_" + str(min_SNR) + ".out",
+						   delta_offset_arcsec=delta_offset_arcsec, delta_freq=delta_freq)
+
 
 class MultiCube:
 	"""
-	A container like object to hold multiple cubes at the same time. Cubes are stored in a dictionary.
-	Allows performing tasks such as residual scaled aperture integration or spectrum extraction.
-	Load another cube into MultiCube object by e.g. mc.load_cube("path_to_cube.residual.fits", "residual")
+    A container like object to hold multiple cubes at the same time. Cubes are stored in a dictionary.
+    Allows performing tasks such as residual scaled aperture integration or spectrum extraction.
+    Load another cube into MultiCube object by e.g. mc.load_cube("path_to_cube.residual.fits", "residual")
 
-	Example:
-		filename="cube.fits"
-		ra, dec, freq = (205.533741, 9.477317341, 222.54) # coord for the emission line
-		mc=MultiCube(filename) # will automatically try to load cube.xxx.fits, where xxx is
-								# residual, dirty, pb, model, psf, or image.pbcor
+    Example:
+        filename="cube.fits"
+        ra, dec, freq = (205.533741, 9.477317341, 222.54) # coord for the emission line
+        mc=MultiCube(filename) # will automatically try to load cube.xxx.fits, where xxx is
+                                # residual, dirty, pb, model, psf, or image.pbcor
 
-		# Alternatively load each cube manually
-		# mc = MultiCube()
-		# mc.load_cube("somewhere/cube.fits", "image")
-		# mc.load_cube("elsewhere/cube.dirty.fits", "dirty")
-		# mc.load_cube("elsewhere/cube.residual.fits", "residual")
-		# mc.load_cube("elsewhere/cube.pb.fits", "pb")
+        # Alternatively load each cube manually
+        # mc = MultiCube()
+        # mc.load_cube("somewhere/cube.fits", "image")
+        # mc.load_cube("elsewhere/cube.dirty.fits", "dirty")
+        # mc.load_cube("elsewhere/cube.residual.fits", "residual")
+        # mc.load_cube("elsewhere/cube.pb.fits", "pb")
 
-		# spectrum extracted from the circular aperture, with associated error, corrected for residual and PB response
-		flux, err, tab = mc.spectrum_corrected(ra=ra, dec=dec, radius=1.5, calc_error=True)
-		# tab.write("spectrum.txt", format="ascii.fixed_width", overwrite=True)  # Save results for later
+        # spectrum extracted from the circular aperture, with associated error, corrected for residual and PB response
+        flux, err, tab = mc.spectrum_corrected(ra=ra, dec=dec, radius=1.5, calc_error=True)
+        # tab.write("spectrum.txt", format="ascii.fixed_width", overwrite=True)  # Save results for later
 
-		# curve of growth up to the maximum radius, in steps of one pixel, in a chosen frequency channel
-		radius, flux, err, tab = mc.growing_aperture_corrected(ra=ra, dec=dec, freq=freq, maxradius=5, calc_error=True)
-		# tab.write("growth.txt", format="ascii.fixed_width", overwrite=True)  # Save results for later
-	"""
+        # curve of growth up to the maximum radius, in steps of one pixel, in a chosen frequency channel
+        radius, flux, err, tab = mc.growing_aperture_corrected(ra=ra, dec=dec, freq=freq, maxradius=5, calc_error=True)
+        # tab.write("growth.txt", format="ascii.fixed_width", overwrite=True)  # Save results for later
+    """
 
 	def __init__(self, filename: str = None, autoload_multi=True):
 		"""
-		Provide the file path to the final cleaned cube. Will try to find other adjacent cubes based on their names.
-		Standard key names from CASA are: image, residual, model, psf, pb, image.pbcor
-		Additional names are dirty, clean.comp
+        Provide the file path to the final cleaned cube. Will try to find other adjacent cubes based on their names.
+        Standard key names from CASA are: image, residual, model, psf, pb, image.pbcor
+        Additional names are dirty, clean.comp
 
-		:param filename: Path string to the cleaned cube fits image.
-		:param autoload_multi: If true, attempt to find other cubes using preset (mostly CASA) suffixes.
-		"""
+        :param filename: Path string to the cleaned cube fits image.
+        :param autoload_multi: If true, attempt to find other cubes using preset (mostly CASA) suffixes.
+        """
 
 		# these are standard suffixes from CASA tclean output (except "dirty")
 		# gildas output has different naming conventions, which are not implemnted here
@@ -823,13 +827,13 @@ class MultiCube:
 
 	def load_cube(self, filename: str, key: str = None):
 		"""
-		Add provided fits file to the MultiCube instance.
-		Known keys are: "image", "residual", "dirty", "pb", "model", "psf", "image.pbcor"
-		If the filename does not end with these words, please provide a manual key.
-		:param filename: Path string to the fits image.
-		:param key: Dictionary key name used to store the cube.
-		:return:
-		"""
+        Add provided fits file to the MultiCube instance.
+        Known keys are: "image", "residual", "dirty", "pb", "model", "psf", "image.pbcor"
+        If the filename does not end with these words, please provide a manual key.
+        :param filename: Path string to the fits image.
+        :param key: Dictionary key name used to store the cube.
+        :return:
+        """
 		# try to estimate the key from the filename
 		if key is None:
 			# assuming the file ends in something like .residual.fits
@@ -858,9 +862,9 @@ class MultiCube:
 
 	def get_loaded_cubes(self):
 		"""
-		Get a list of loaded cubes (those that are not None).
-		:return: List of key names.
-		"""
+        Get a list of loaded cubes (those that are not None).
+        :return: List of key names.
+        """
 		return [k for k in self.cubes.keys() if self.cubes[k] is not None]
 
 	loaded_cubes = property(get_loaded_cubes)
@@ -877,19 +881,19 @@ class MultiCube:
 
 	def log(self, text: str):
 		"""
-		Basic logger function to allow better functionality in the future development.
-		All class functions print info through this wrapper.
-		Could be extended to provide different levels of info, timestamps, or logging to a file.
-		"""
+        Basic logger function to allow better functionality in the future development.
+        All class functions print info through this wrapper.
+        Could be extended to provide different levels of info, timestamps, or logging to a file.
+        """
 		print(text)
 
 	def make_clean_comp(self, overwrite=False):
 		"""
-		Generate a clean component cube. Defined as the cleaned cube minus the residual, or, alternatively,
-		model image convolved with the clean beam. This cube is not outputted by CASA.
-		:param overwrite: If true, overrides any present "clean.comp" cube.
-		:return: None
-		"""
+        Generate a clean component cube. Defined as the cleaned cube minus the residual, or, alternatively,
+        model image convolved with the clean beam. This cube is not outputted by CASA.
+        :param overwrite: If true, overrides any present "clean.comp" cube.
+        :return: None
+        """
 		self.log("Generate clean component cube.")
 
 		if self["image"] is None:
@@ -908,12 +912,12 @@ class MultiCube:
 
 	def make_flatnoise(self, overwrite=False):
 		"""
-		Generate a flat noise cube from the primary beam (PB) corrected one, and the PB response (which is <= 1).
-		PB corrected cube has valid fluxes, but rms computation is not straightforward.
-		PB corrected cube = flat noise cube / PB response
-		:param overwrite: If true, overrides any present "image"" cube.
-		:return: None
-		"""
+        Generate a flat noise cube from the primary beam (PB) corrected one, and the PB response (which is <= 1).
+        PB corrected cube has valid fluxes, but rms computation is not straightforward.
+        PB corrected cube = flat noise cube / PB response
+        :param overwrite: If true, overrides any present "image"" cube.
+        :return: None
+        """
 		self.log("Generate flat noise image cube from the PB corrected one.")
 
 		if self["image.pbcor"] is None:
@@ -932,9 +936,9 @@ class MultiCube:
 
 	def __cubes_prepare(self) -> bool:
 		"""
-		Perform several prelimiaries before attempting residual scaled flux extraction.
-		:return: True if no problems are detected, False otherwise.
-		"""
+        Perform several prelimiaries before attempting residual scaled flux extraction.
+        :return: True if no problems are detected, False otherwise.
+        """
 
 		# if necessary, use pb corrected map and pb to generate flat noise map
 		only_pbcor_exists = self["image"] is None and self["image.pbcor"] is not None and self["image.pb"] is not None
@@ -968,31 +972,31 @@ class MultiCube:
 						   px: int = None, py: int = None, channel: int = None,
 						   calc_error=True, sn_cut: float = 2.5, apply_pb_corr=True):
 		"""
-		Extract aperture integrated spectrum from the cube using the residual scaling to account for the dirty beam.
-		Correction for the primary beam response is applied if avaliable.
-		Coordinates can be given in degrees (ra, dec) or pixels (px, py).
-		If no coordinates are given, the center of the map is assumed.
+        Extract aperture integrated spectrum from the cube using the residual scaling to account for the dirty beam.
+        Correction for the primary beam response is applied if avaliable.
+        Coordinates can be given in degrees (ra, dec) or pixels (px, py).
+        If no coordinates are given, the center of the map is assumed.
 
-		For details on the method see appendix A in Novak et al. (2019):
-		https://ui.adsabs.harvard.edu/abs/2019ApJ...881...63N/abstract
+        For details on the method see appendix A in Novak et al. (2019):
+        https://ui.adsabs.harvard.edu/abs/2019ApJ...881...63N/abstract
 
-		:param ra: Right ascention in degrees.
-		:param dec: Declination in degrees.
-		:param radius: Circular aperture radius in arcsec.
-		:param px: Right ascention pixel coord (alternative to ra).
-		:param py: Declination pixel coord (alternative to dec).
-		:param channel: Channel index (alternative to freq)
-		:param freq: Frequency in GHz. Extract only in a single channel instead of the full cube.
-		:param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
-		:param sn_cut: Use emission above this S/N threshold to estimate the clean-to-dirty beam ratio, need calc_error.
-		:param apply_pb_corr: Scale flux and error by the primary beam response (single pix value), needs loaded pb map.
-		:return: flux, err, tab: 1D array for corrected flux and error estimate; tab is a Table with all computations.
-		"""
+        :param ra: Right ascention in degrees.
+        :param dec: Declination in degrees.
+        :param radius: Circular aperture radius in arcsec.
+        :param px: Right ascention pixel coord (alternative to ra).
+        :param py: Declination pixel coord (alternative to dec).
+        :param channel: Channel index (alternative to freq)
+        :param freq: Frequency in GHz. Extract only in a single channel instead of the full cube.
+        :param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
+        :param sn_cut: Use emission above this S/N threshold to estimate the clean-to-dirty beam ratio, need calc_error.
+        :param apply_pb_corr: Scale flux and error by the primary beam response (single pix value), needs loaded pb map.
+        :return: flux, err, tab: 1D array for corrected flux and error estimate; tab is a Table with all computations.
+        """
 
 		# take single pixel value if no aperture radius given
 		if radius <= 0:
 			print('No aperture defined - taking a single pixel')
-			#raise ValueError("No aperture is defined!")
+		# raise ValueError("No aperture is defined!")
 
 		# check and prepare cubes for residual scaling
 		if not self.__cubes_prepare():
@@ -1004,9 +1008,10 @@ class MultiCube:
 		# run aperture extraction on all cubes
 		# the beam volume should be the same in all of them (checked by __cubes_prepare)
 		params = dict(ra=ra, dec=dec, radius=radius, px=px, py=py, channel=channel, freq=freq)
-		flux_image, err, npix, peak_sb = self["image"].spectrum(calc_error=calc_error, **params)  # compute rms only on this map
-		flux_residual, _, _ ,_ = self["residual"].spectrum(calc_error=False, **params)
-		flux_dirty, _, _ , _ = self["dirty"].spectrum(calc_error=False, **params)
+		flux_image, err, npix, peak_sb = self["image"].spectrum(calc_error=calc_error,
+																**params)  # compute rms only on this map
+		flux_residual, _, _, _ = self["residual"].spectrum(calc_error=False, **params)
+		flux_dirty, _, _, _ = self["dirty"].spectrum(calc_error=False, **params)
 		flux_clean = flux_image - flux_residual
 
 		# alternatively, force creation of the clean components cube
@@ -1081,11 +1086,11 @@ class MultiCube:
 					 nbeam,  # Number of beams inside the aperture
 					 epsilon,  # Clean-to-dirty beam ratio in the channel
 					 rmses,  # Rms noise of the channel
-					 peak_sb, # (Corrected) Peak Surface Brightness of the channel
+					 peak_sb,  # (Corrected) Peak Surface Brightness of the channel
 					 pb],  # Primary beam response (<=1) at the given coordinate, single pixel value
 					names=["channel", "freq", "flux", "err", "epsilon_fix",
 						   "flux_image", "flux_dirty", "flux_residual", "flux_clean",
-						   "npix", "nbeam", "epsilon", "rms", "peak_sb" , "pb"])
+						   "npix", "nbeam", "epsilon", "rms", "peak_sb", "pb"])
 
 		return np.array(flux), np.array(err), tab
 
@@ -1094,28 +1099,28 @@ class MultiCube:
 								   px: int = None, py: int = None, channel: int = 0,
 								   calc_error=True, apply_pb_corr=True):
 		"""
-		Extract the curve of growth from the map using the residual scaling to account for the dirty beam.
-		Correction for the primary beam response is applied if avaliable.
-		Coordinates can be given in degrees (ra, dec) or pixels (px, py).
-		If no coordinates are given, the center of the map is assumed.
+        Extract the curve of growth from the map using the residual scaling to account for the dirty beam.
+        Correction for the primary beam response is applied if avaliable.
+        Coordinates can be given in degrees (ra, dec) or pixels (px, py).
+        If no coordinates are given, the center of the map is assumed.
 
-		For details on the method see appendix A in Novak et al. (2019):
-		https://ui.adsabs.harvard.edu/abs/2019ApJ...881...63N/abstract
+        For details on the method see appendix A in Novak et al. (2019):
+        https://ui.adsabs.harvard.edu/abs/2019ApJ...881...63N/abstract
 
-		:param ra: Right ascention in degrees.
-		:param dec: Declination in degrees.
-		:param freq: Frequency in GHz.
-		:param maxradius: Max radius for aperture integration in arcsec.
-		:param binspacing: Resolution of the growth flux curve in arcsec, default is one pixel size.
-		:param bins: Custom bins for curve growth (1D np array).
-		:param px: Right ascention pixel coord (alternative to ra).
-		:param py: Declination pixel coord (alternative to dec).
-		:param channel: Index of the cube channel to take (alternative to freq). Default is the first channel.
-		:param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
-		:param apply_pb_corr: Scale flux and error by the primary beam response (single pix value), needs loaded pb map.
-		:return: radius, flux, err, tab:  1D array for radius[arcsec] and corrected flux and error estimate;
-		tab is a Table with all computations.
-		"""
+        :param ra: Right ascention in degrees.
+        :param dec: Declination in degrees.
+        :param freq: Frequency in GHz.
+        :param maxradius: Max radius for aperture integration in arcsec.
+        :param binspacing: Resolution of the growth flux curve in arcsec, default is one pixel size.
+        :param bins: Custom bins for curve growth (1D np array).
+        :param px: Right ascention pixel coord (alternative to ra).
+        :param py: Declination pixel coord (alternative to dec).
+        :param channel: Index of the cube channel to take (alternative to freq). Default is the first channel.
+        :param calc_error: Set to False to skip error calculations, if the rms computation is slow or not necessary.
+        :param apply_pb_corr: Scale flux and error by the primary beam response (single pix value), needs loaded pb map.
+        :return: radius, flux, err, tab:  1D array for radius[arcsec] and corrected flux and error estimate;
+        tab is a Table with all computations.
+        """
 
 		# check and prepare cubes for residual scaling
 		if not self.__cubes_prepare():
