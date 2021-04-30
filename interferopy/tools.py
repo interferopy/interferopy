@@ -487,7 +487,7 @@ def line_stats_sextractor(catalogue, binning, SNR_min=5):
 
     ind_high_SN = np.where(snr > SNR_min)[0]
 
-    # writing RA DEC FREQ(GHZ) X Y SNR FLUX_MAX
+    # writing RA DEC FREQ(GHZ) X Y SNR FLUX_MAX BINNING
     shuffled_catalogue = np.zeros(shape=(len(ind_high_SN), 8))
     shuffled_catalogue[:, 0] = catalogue[ind_high_SN, 4]
     shuffled_catalogue[:, 1] = catalogue[ind_high_SN, 5]
@@ -501,61 +501,48 @@ def line_stats_sextractor(catalogue, binning, SNR_min=5):
     return shuffled_catalogue
 
 
-def run_line_stats_sex(sextractor_pos_catalogue_name, sextractor_neg_catalogue_name, binning_array=np.arange(1, 20, 2),
+def run_line_stats_sex(sextractor_catalogue_name,
+                       binning_array=np.arange(1, 20, 2),
                        SNR_min=5):
     '''
-    Merges, cleans and reformat positive and negative clump catalogues of different kernel widths. Also makes a DS9
+    Merges, cleans and reformat clump catalogues (positive or negative) of different kernel widths. Also makes a DS9
     region file for all clumps above a chosen threshold. Made to operate over all kernel half-widths for convenience.
-    :param sextractor_pos_catalogue_name: Generic catalogue name for the field, excluding kernel half-width, positive clumps
-    :param sextractor_neg_catalogue_name: Generic catalogue name for the field, excluding kernel half-width, negative clumps
+    :param sextractor_catalogue_name: Generic catalogue name for the field, excluding kernel half-width
     :param binning_array: array of kernel half-width to process for the given field
     :param SNR_min: Threshold SN to select clump detections
     :return: Saves region files (input name +".reg") and catalogues (input name +".out") for later study
     '''
 
     # open region files in overwrite mode
-    pos_clumps_reg = open(sextractor_pos_catalogue_name + 'minSNR_' + str(SNR_min) + '.reg', 'w+')
-    pos_clumps_reg.write('# Region file format: DS9 version 4.1 \n '
+    with open(sextractor_catalogue_name+'minSNR_'+str(SNR_min)+'.reg', 'w+') as clumps_reg:
+        clumps_reg.write('# Region file format: DS9 version 4.1 \n '
                          'global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 '
                          'dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 \n')
-    pos_clumps_reg.write('fk5 \n')
-    neg_clumps_reg = open(sextractor_neg_catalogue_name + 'minSNR_' + str(SNR_min) + '.reg', 'w+')
-    neg_clumps_reg.write('# Region file format: DS9 version 4.1 \n '
-                         'global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 '
-                         'dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 \n')
-    neg_clumps_reg.write('fk5 \n')
+        clumps_reg.write('fk5 \n')
 
-    pos_clumps_name_out = sextractor_pos_catalogue_name + '_minSNR_' + str(SNR_min) + '.out'
-    neg_clumps_name_out = sextractor_neg_catalogue_name + '_minSNR_' + str(SNR_min) + '.out'
+        clumps_name_out = sextractor_catalogue_name+'_minSNR_'+str(SNR_min)+'.out'
 
     for binning in binning_array:
-        pos_catalogue = np.loadtxt(sextractor_pos_catalogue_name + '_kw' + str(int(binning)) + '.cat')
-        neg_catalogue = np.loadtxt(sextractor_neg_catalogue_name + '_kw' + str(int(binning)) + '.cat')
+        catalogue = np.loadtxt(sextractor_catalogue_name + '_kw' + str(int(binning)) + '.cat')
 
-        cat_for_out_file_pos = line_stats_sextractor(catalogue=pos_catalogue, binning=binning, SNR_min=SNR_min)
-        cat_for_out_file_neg = line_stats_sextractor(catalogue=neg_catalogue, binning=binning, SNR_min=SNR_min)
+        cat_for_out_file = line_stats_sextractor(catalogue=catalogue,
+                                                 binning=binning,
+                                                 SNR_min=SNR_min)
 
-        for x in cat_for_out_file_pos:
-            pos_clumps_reg.write('circle(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
-                                 + ',0.5") \n  # text(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
-                                 + ')   text={' + '{:7.3f}'.format(x[2]) + '} \n')
-        for x in cat_for_out_file_neg:
-            neg_clumps_reg.write('circle(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
-                                 + ',0.5") \n  # text(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
-                                 + ')   text={' + '{:7.3f}'.format(x[2]) + '} \n')
+        for x in cat_for_out_file:
+            clumps_reg.write('circle(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
+                             + ',0.5") \n  # text(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
+                             + ')   text={' + '{:7.3f}'.format(x[2]) + '} \n')
 
         if binning == binning_array[0]:
-            np.savetxt(fname=pos_clumps_name_out, X=cat_for_out_file_pos,
-                       fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f'])
-            np.savetxt(fname=neg_clumps_name_out, X=cat_for_out_file_neg,
-                       fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f'])
+            np.savetxt(fname=clumps_name_out, X=cat_for_out_file,
+                       fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f'],
+                       header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING")
         else:
-            with open(pos_clumps_name_out, "ab") as f:
-                np.savetxt(fname=f, X=cat_for_out_file_pos,
-                           fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f'])
-            with open(neg_clumps_name_out, "ab") as f:
-                np.savetxt(fname=f, X=cat_for_out_file_neg,
-                           fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f'])
+            with open(clumps_name_out, "ab") as f:
+                np.savetxt(fname=f, X=cat_for_out_file,
+                           fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f'],
+                           header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING")
 
 
 def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1):
@@ -604,7 +591,8 @@ def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1):
     catalogue_final = catalogue_final[catalogue_final[:, -1].argsort()]
 
     np.savetxt(cat_name[:-4] + '_groups.cat', catalogue_final,
-               fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f', '%2.0i'])
+               fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f', '%2.0i'],
+               header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING GROUP")
 
     catalogue_cropped_best = np.zeros((ncnt - 2, len(catalogue_final[0])))
     for i in range(ncnt - 2):
@@ -617,7 +605,8 @@ def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1):
             catalogue_cropped_best[i, :] = catalogue_final[ind, :]
 
     np.savetxt(cat_name[:-4] + '_cropped.cat', catalogue_cropped_best,
-               fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f', '%2.0i'])
+               fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f', '%2.0i'],
+               header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING GROUP")
 
     catalogue_cropped_best_region = open(cat_name[:-4] + '_cropped.reg', 'w+')
     catalogue_cropped_best_region.write('# Region file format: DS9 version 4.1 \n '
@@ -626,8 +615,7 @@ def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1):
     catalogue_cropped_best_region.write('fk5 \n')
     for x in catalogue_cropped_best:
         catalogue_cropped_best_region.write('circle(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
-                                            + ',0.5") \n  # text(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(
-            x[1])
+                                            + ',0.5") \n  # text(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
                                             + ')   text={' + '{:7.3f}'.format(x[2]) + '}\n')
 
 
