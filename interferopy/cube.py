@@ -458,7 +458,7 @@ class Cube:
         :return: value or (value, error)
         """
 
-        spec, err, _ = self.spectrum(ra=ra, dec=dec, radius=0, freq=freq, channel=channel, calc_error=calc_error)
+        spec, err, _, _ = self.spectrum(ra=ra, dec=dec, radius=0, freq=freq, channel=channel, calc_error=calc_error)
         if calc_error:
             return spec, err
         else:
@@ -478,7 +478,7 @@ class Cube:
         :return: value or (value, error)
         """
 
-        flux, err, _ = self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=channel, calc_error=calc_error)
+        flux, err, _, _ = self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=channel, calc_error=calc_error)
         if calc_error:
             return flux, err
         else:
@@ -1048,7 +1048,7 @@ class MultiCube:
         # apply PB correction if possible
         if apply_pb_corr and "pb" in self.loaded_cubes:
             self.log("Correcting flux and err for PB response.")
-            pb, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq, calc_error=False)
+            pb, _, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq, calc_error=False)
             flux = flux / pb
             err = err / pb
             peak_sb = peak_sb / pb
@@ -1149,7 +1149,7 @@ class MultiCube:
         if apply_pb_corr and "pb" in self.loaded_cubes:
             self.log("Correcting flux and err for PB response.")
             # will return a single pb value, because channel is set
-            pb, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq, calc_error=False)
+            pb, _, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq, calc_error=False)
             pb = np.full(len(flux_image), pb)
             flux = np.array(flux / pb)
             err = np.array(err / pb)
