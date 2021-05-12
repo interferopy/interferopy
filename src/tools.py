@@ -665,21 +665,23 @@ def fidelity_selection(cat_negative, cat_positive, max_SN=20, plot_name='', i_SN
 	sn_thres = erfinv((fidelity_threshold - 0.5) / 0.5) * popt[0] + popt[1]
 	print(sn_thres)
 	if plot_name != '':
-		fig = plt.figure(figsize=(8, 4))
+		fig = plt.figure(figsize=(5, 4))
 		ax1 = fig.add_subplot(211)
 		ax1.plot(bins, fidelity, drawstyle='steps-mid')
 		ax1.fill_between(bins, fidelity, step="mid", alpha=0.4)
-		ax1.plot(np.linspace(0, 10, 200), fidelity_function(np.linspace(0, 10, 200), popt[0], popt[1]),
+		ax1.plot(np.linspace(0, max_SN, 200), fidelity_function(np.linspace(0, max_SN, 200), popt[0], popt[1]),
 				 color='firebrick')
-		plt.vlines(x=sn_thres, ymin=0, ymax=1.1, linestyles='--')
+		plt.vlines(x=sn_thres, ymin=0, ymax=1.1, linestyles='--', color='k')
 		plt.xticks([])
 		plt.ylabel('Fidelity')
 		ax2 = fig.add_subplot(212)
-		ax2.plot(bins, hist_N, drawstyle='steps-mid')
+		ax2.plot(bins, hist_P, drawstyle='steps-mid')
 		ax2.set_yscale('log')
-		ax2.fill_between(bins, hist_N, step="mid", alpha=0.4)
-		plt.vlines(x=sn_thres, ymin=0, ymax=np.max(hist_N) * 1.1, linestyles='--')
-		plt.ylabel(r'$\log N_{\rm{pos}}$')
+		ax2.fill_between(bins, hist_P, step="mid", alpha=0.4, label='Positive clumps')
+		ax2.fill_between(bins, hist_N, step="mid", alpha=0.4, label='Negative clumps')
+		ax2.legend(fontsize=10)
+		plt.vlines(x=sn_thres, ymin=0, ymax=np.max(hist_N) * 1.1, linestyles='--', color='k')
+		plt.ylabel(r'$\log N_{\rm{clumps}}$')
 		plt.xlabel('S/N')
 
 		plt.subplots_adjust(wspace=None, hspace=None)
