@@ -549,7 +549,7 @@ def run_line_stats_sex(sextractor_pos_catalogue_name, sextractor_neg_catalogue_n
 					   fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f'])
 			np.savetxt(fname=neg_clumps_name_out, X=cat_for_out_file_neg,
 					   fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f'])
-        else:
+		else:
 			with open(pos_clumps_name_out, "ab") as f:
 				np.savetxt(fname=f, X=cat_for_out_file_pos,
 						   fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f'])
