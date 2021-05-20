@@ -635,7 +635,8 @@ def fidelity_function(sn, sigma, c):
 	return 0.5 * erf((sn - c) / sigma) + 0.5
 
 
-def fidelity_selection(cat_negative, cat_positive, max_SN=20, plot_name='', i_SN=5, fidelity_threshold=0.6):
+def fidelity_selection(cat_negative, cat_positive, max_SN=20, plot_name='', title_plot='', i_SN=5,
+					   fidelity_threshold=0.6):
 	'''
     Fidelity selection following Walter et al. 2016 (https://ui.adsabs.harvard.edu/abs/2016ApJ...833...67W/abstract) to
     select clumps which are more likely to be positive than negative. Plot the selection and threshold if required.
@@ -674,6 +675,8 @@ def fidelity_selection(cat_negative, cat_positive, max_SN=20, plot_name='', i_SN
 		plt.vlines(x=sn_thres, ymin=0, ymax=1.1, linestyles='--', color='k')
 		plt.xticks([])
 		plt.ylabel('Fidelity')
+		if title_plot != '':
+			plt.title(title_plot)
 		ax2 = fig.add_subplot(212)
 		ax2.plot(bins, hist_P, drawstyle='steps-mid')
 		ax2.set_yscale('log')
