@@ -636,19 +636,19 @@ class Cube:
 		fits.writeto(filename, self.im.T, self.head, overwrite=overwrite)
 		self.log("Fits file saved to " + filename)
 
-		def findclumps_1kernel(self, output_file, rms_region=1. / 4., minwidth=3, sextractor_param_file='default.sex',
-							   clean_tmp=True, negative=False):
-			'''
-            FINDCLUMP(s) algorithm (Decarli+2014,Walter+2016). Takes the cube image and outputs the 3d (x,y,wavelength) position
-            of clumps of a minimum SN specified. Works by using a top-hat filter on a rebinned version of the datacube.
-            :param output_file: relative/absolute path to the outpute catalogue
-            :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord]. If none, takes the central
-                          25% pixels (square)
-            :param sn_threshold: Minimum SN of peaks to retain
-            :param minwidth: Number of channels to bin
-            :param clean_tmp: Whether to remove or not the temporary files created by Sextractor
-            :return:
-            '''
+	def findclumps_1kernel(self, output_file, rms_region=1. / 4., minwidth=3, sextractor_param_file='default.sex',
+						   clean_tmp=True, negative=False):
+		'''
+		FINDCLUMP(s) algorithm (Decarli+2014,Walter+2016). Takes the cube image and outputs the 3d (x,y,wavelength) position
+		of clumps of a minimum SN specified. Works by using a top-hat filter on a rebinned version of the datacube.
+		:param output_file: relative/absolute path to the outpute catalogue
+		:param rms_region: Region to compute the rms noise [2x2 array in image pixel coord]. If none, takes the central
+					  25% pixels (square)
+		:param sn_threshold: Minimum SN of peaks to retain
+		:param minwidth: Number of channels to bin
+		:param clean_tmp: Whether to remove or not the temporary files created by Sextractor
+		:return:
+		'''
 
 		if not exists('./tmp_findclumps/'):
 			os.system('mkdir ./tmp_findclumps')
