@@ -106,7 +106,7 @@ class Cube:
 			self.head['CDELT3'] = 1
 			self.head['CRPIX3'] = 0
 			naxis = 3
-			self.log("Warning: 2maps may have incorrect pixsize/beamvol. Please replace!")
+			self.log("Warning: 2D maps may have incorrect pixsize/beamvol. Please replace!")
 		else:
 			raise RuntimeError("Invalid number of cube dimensions.")
 		self.im = image
@@ -145,7 +145,19 @@ class Cube:
 				else:
 					vel_scale = 1
 				self.deltafreq = reffreq * (self.head["CDELT3"] * vel_scale / const.c)
+			elif str(self.head["CTYPE3"]).strip() == "WAVE":
+				_, _, wave_lambda = self.wcs.all_pix2world(int(self.im.shape[0] / 2), int(self.im.shape[1] / 2),
+														   range(nch), 0)
+				if str(self.head["CUNIT3"]).strip().lower() == "m":
+					freqs = 3e5 / wave_lambda * 1e-9  # in GHz
+					self.deltafreq = 3e5 / self.head["CDELT3"] * 1e-9
+					self.reffreq = 3e5 / self.head["CRVAL3"] * 1e-9
+				else:
+					freqs = None
+					self.log("Warning: unknown 3rd axis units.")
+			# if frequencies are given in radio velocity, convert to freqs
 			else:
+				print(str(self.head["CTYPE3"]))
 				freqs = None
 				self.log("Warning: unknown 3rd axis format.")
 			self.freqs = freqs
@@ -458,7 +470,7 @@ class Cube:
         :return: value or (value, error)
         """
 
-		spec, err, _ = self.spectrum(ra=ra, dec=dec, radius=0, freq=freq, channel=channel, calc_error=calc_error)
+		spec, err, _, _ = self.spectrum(ra=ra, dec=dec, radius=0, freq=freq, channel=channel, calc_error=calc_error)
 		if calc_error:
 			return spec, err
 		else:
@@ -478,7 +490,8 @@ class Cube:
         :return: value or (value, error)
         """
 
-		flux, err, _ = self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=channel, calc_error=calc_error)
+		flux, err, _, _ = self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=channel,
+										calc_error=calc_error)
 		if calc_error:
 			return flux, err
 		else:
@@ -1048,7 +1061,8 @@ class MultiCube:
 		# apply PB correction if possible
 		if apply_pb_corr and "pb" in self.loaded_cubes:
 			self.log("Correcting flux and err for PB response.")
-			pb, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq, calc_error=False)
+			pb, _, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq,
+											  calc_error=False)
 			flux = flux / pb
 			err = err / pb
 			peak_sb = peak_sb / pb
@@ -1149,7 +1163,8 @@ class MultiCube:
 		if apply_pb_corr and "pb" in self.loaded_cubes:
 			self.log("Correcting flux and err for PB response.")
 			# will return a single pb value, because channel is set
-			pb, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq, calc_error=False)
+			pb, _, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq,
+											  calc_error=False)
 			pb = np.full(len(flux_image), pb)
 			flux = np.array(flux / pb)
 			err = np.array(err / pb)
