@@ -10,7 +10,6 @@ from astropy.io import fits
 from astropy import wcs
 from astropy.coordinates import SkyCoord
 from scipy.special import erf, erfinv
-from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 
