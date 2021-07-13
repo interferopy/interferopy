@@ -522,27 +522,27 @@ def run_line_stats_sex(sextractor_catalogue_name,
 
         clumps_name_out = sextractor_catalogue_name+'_minSNR_'+str(SNR_min)+'.out'
 
-    for binning in binning_array:
-        catalogue = np.loadtxt(sextractor_catalogue_name + '_kw' + str(int(binning)) + '.cat')
+        for binning in binning_array:
+            catalogue = np.loadtxt(sextractor_catalogue_name + '_kw' + str(int(binning)) + '.cat')
 
-        cat_for_out_file = line_stats_sextractor(catalogue=catalogue,
-                                                 binning=binning,
-                                                 SNR_min=SNR_min)
+            cat_for_out_file = line_stats_sextractor(catalogue=catalogue,
+                                                     binning=binning,
+                                                     SNR_min=SNR_min)
 
-        for x in cat_for_out_file:
-            clumps_reg.write('circle(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
-                             + ',0.5") \n  # text(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
-                             + ')   text={' + '{:7.3f}'.format(x[2]) + '} \n')
+            for x in cat_for_out_file:
+                clumps_reg.write('circle(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
+                                 + ',0.5") \n  # text(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
+                                 + ')   text={' + '{:7.3f}'.format(x[2]) + '} \n')
 
-        if binning == binning_array[0]:
-            np.savetxt(fname=clumps_name_out, X=cat_for_out_file,
-                       fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f'],
-                       header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING")
-        else:
-            with open(clumps_name_out, "ab") as f:
-                np.savetxt(fname=f, X=cat_for_out_file,
+            if binning == binning_array[0]:
+                np.savetxt(fname=clumps_name_out, X=cat_for_out_file,
                            fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f'],
                            header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING")
+            else:
+                with open(clumps_name_out, "ab") as f:
+                    np.savetxt(fname=f, X=cat_for_out_file,
+                               fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f'],
+                               header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING")
 
 
 def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1):
