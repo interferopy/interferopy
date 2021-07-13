@@ -690,6 +690,8 @@ class Cube:
                 continue
             elif len(sextractor_cat.shape) == 1:
                 sextractor_cat = sextractor_cat.reshape((-1, 6))
+            if clean_tmp:
+                os.system('rm ./tmp_findclumps/target.list')
             # append k , rms, freq to sextractor_cat
             sextractor_cat = np.hstack([sextractor_cat, np.ones((len(sextractor_cat), 1)) * k,
                                         np.ones((len(sextractor_cat), 1)) * rms,
