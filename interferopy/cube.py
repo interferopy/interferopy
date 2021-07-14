@@ -690,8 +690,6 @@ class Cube:
                 continue
             elif len(sextractor_cat.shape) == 1:
                 sextractor_cat = sextractor_cat.reshape((-1, 6))
-            if clean_tmp:
-                os.system('rm ./tmp_findclumps/target.list')
             # append k , rms, freq to sextractor_cat
             sextractor_cat = np.hstack([sextractor_cat, np.ones((len(sextractor_cat), 1)) * k,
                                         np.ones((len(sextractor_cat), 1)) * rms,
@@ -710,6 +708,9 @@ class Cube:
             else:
                 with open(output_file + '_kw' + str(int(minwidth)) + '.cat', "ab") as f:
                     np.savetxt(fname=f, X=sextractor_cat)
+        if clean_tmp:
+            os.system('rm ./target.list')
+            os.system('rmdir ./tmp_findclumps')
 
     def findclumps_full(self, output_file, kernels=np.arange(3, 20, 2), rms_region=1. / 4.,
                         sextractor_param_file='default.sex', clean_tmp=True, min_SNR=0,
