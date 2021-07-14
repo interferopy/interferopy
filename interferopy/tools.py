@@ -509,17 +509,17 @@ def run_line_stats_sex(sextractor_catalogue_name,
     :param sextractor_catalogue_name: Generic catalogue name for the field, excluding kernel half-width
     :param binning_array: array of kernel half-width to process for the given field
     :param SNR_min: Threshold SN to select clump detections
-    :return: Saves region files (input name +".reg") and catalogues (input name +".out") for later study
+    :return: Saves region files (input name +".reg") and catalogues (input name +".cat") for later study
     '''
 
     # open region files in overwrite mode
-    with open(sextractor_catalogue_name+'minSNR_'+str(SNR_min)+'.reg', 'w+') as clumps_reg:
+    with open(sextractor_catalogue_name+'_minSNR_'+str(SNR_min)+'.reg', 'w+') as clumps_reg:
         clumps_reg.write('# Region file format: DS9 version 4.1 \n '
                          'global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 '
                          'dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 \n')
         clumps_reg.write('fk5 \n')
 
-        clumps_name_out = sextractor_catalogue_name+'_minSNR_'+str(SNR_min)+'.out'
+        clumps_name_out = sextractor_catalogue_name+'_minSNR_'+str(SNR_min)+'.cat'
 
         for binning in binning_array:
             catalogue = np.loadtxt(sextractor_catalogue_name + '_kw' + str(int(binning)) + '.cat')

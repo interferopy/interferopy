@@ -746,14 +746,14 @@ class Cube:
             tools.run_line_stats_sex(sextractor_catalogue_name=output_file + '_clumpsP',
                                      binning_array=kernels, SNR_min=min_SNR)
 
-            tools.crop_doubles(cat_name=output_file + "_clumpsP_minSNR_" + str(min_SNR) + ".out",
+            tools.crop_doubles(cat_name=output_file + "_clumpsP_minSNR_" + str(min_SNR) + ".cat",
                                delta_offset_arcsec=delta_offset_arcsec, delta_freq=delta_freq)
 
         if run_negative:
             tools.run_line_stats_sex(sextractor_catalogue_name=output_file + '_clumpsN',
                                      binning_array=kernels, SNR_min=min_SNR)
 
-            tools.crop_doubles(cat_name=output_file + "_clumpsN_minSNR_" + str(min_SNR) + ".out",
+            tools.crop_doubles(cat_name=output_file + "_clumpsN_minSNR_" + str(min_SNR) + ".cat",
                                delta_offset_arcsec=delta_offset_arcsec, delta_freq=delta_freq)
 
 
