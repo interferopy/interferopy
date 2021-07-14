@@ -1,4 +1,5 @@
 import os
+from tqdm import tqdm
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table
@@ -638,7 +639,7 @@ class Cube:
 
     def findclumps_1kernel(self, output_file, rms_region=1./4., minwidth=3,
                            sextractor_param_file='default.sex',
-                           clean_tmp=True, negative=False):
+                           clean_tmp=True, negative=False, verbose=False):
         '''
         FINDCLUMP(s) algorithm (Decarli+2014,Walter+2016). Takes the cube image and outputs the 3d (x,y,wavelength) position
         of clumps of a minimum SN specified. Works by using a top-hat filter on a rebinned version of the datacube.
@@ -658,7 +659,7 @@ class Cube:
         if minwidth % 2 == 1:
             chnbox = int((minwidth - 1) / 2.0)
         else:
-            print('WARNING: Window must be odd number of channels, using minwidth +1')
+            self.log('WARNING: Window must be odd number of channels, using minwidth +1')
             chnbox = int(minwidth / 2.0)
 
         if negative:
@@ -669,8 +670,12 @@ class Cube:
         nax1 = cube.shape[0]
         nax2 = cube.shape[1]
         nax3 = cube.shape[2]
-        print(nax1, nax2, nax3, len(self.freqs))
-        for k in range(chnbox, nax1 - chnbox - 1):
+        if verbose:
+            self.log("Running sextractor for kernel_width={}".format(minwidth))
+            iterable = tqdm(range(chnbox, nax1 - chnbox - 1))
+        else:
+            iterable = range(chnbox, nax1 - chnbox - 1)
+        for k in iterable:
             # collapsing cube over chosen channel number, saving rms in center
             im_channel_sum = np.nansum(cube[k - chnbox:k + chnbox + 1, :, :], axis=0)
             rms = np.nanstd(
@@ -730,19 +735,21 @@ class Cube:
         :delta_freq: maximum frequency offset to match detections in the cube [GHz]
         :run_positive: run findclumps on the positive cube
         :run_negative: run findclumps on the negative cube
-        :verbose: increase verbosity. note: to mute sextractor, modify ``VERBOSE_TYPE`` in ``default.sex``
+        :verbose: increase verbosity (if True, better mute sextractor by setting ``VERBOSE_TYPE`` to ``QUIET`` in ``default.sex``)
         '''
 
         for i in kernels:
             if run_positive:
                 self.findclumps_1kernel(output_file=output_file + '_clumpsP', negative=False, minwidth=i,
                                         clean_tmp=clean_tmp, rms_region=rms_region,
-                                        sextractor_param_file=sextractor_param_file)
+                                        sextractor_param_file=sextractor_param_file,
+                                        verbose=verbose)
 
             if run_negative:
                 self.findclumps_1kernel(output_file=output_file + '_clumpsN', negative=True, minwidth=i,
                                         clean_tmp=clean_tmp, rms_region=rms_region,
-                                        sextractor_param_file=sextractor_param_file)
+                                        sextractor_param_file=sextractor_param_file,
+                                        verbose=verbose)
 
         if run_positive:
             tools.run_line_stats_sex(sextractor_catalogue_name=output_file + '_clumpsP',
@@ -1015,7 +1022,7 @@ class MultiCube:
 
         # take single pixel value if no aperture radius given
         if radius <= 0:
-            print('No aperture defined - taking a single pixel')
+            self.log('No aperture defined - taking a single pixel')
         # raise ValueError("No aperture is defined!")
 
         # check and prepare cubes for residual scaling
