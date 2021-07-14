@@ -715,8 +715,8 @@ class Cube:
     def findclumps_full(self, output_file, kernels=np.arange(3, 20, 2), rms_region=1. / 4.,
                         sextractor_param_file='default.sex', clean_tmp=True, min_SNR=0,
                         delta_offset_arcsec=2, delta_freq=0.1,
-                        run_positive=True,
-                        run_negative=True):
+                        run_positive=True, run_negative=True,
+                        verbose=False):
         '''
         Run the findclump search for different kernels sizes, on the positive (and negative) cube(s).
         Crops doubles and trim candidates above a mininum SNR. See findclumps_1kernel().
@@ -730,6 +730,7 @@ class Cube:
         :delta_freq: maximum frequency offset to match detections in the cube [GHz]
         :run_positive: run findclumps on the positive cube
         :run_negative: run findclumps on the negative cube
+        :verbose: increase verbosity. note: to mute sextractor, modify ``VERBOSE_TYPE`` in ``default.sex``
         '''
 
         for i in kernels:
@@ -748,14 +749,18 @@ class Cube:
                                      binning_array=kernels, SNR_min=min_SNR)
 
             tools.crop_doubles(cat_name=output_file + "_clumpsP_minSNR_" + str(min_SNR) + ".cat",
-                               delta_offset_arcsec=delta_offset_arcsec, delta_freq=delta_freq)
+                               delta_offset_arcsec=delta_offset_arcsec,
+                               delta_freq=delta_freq,
+                               verbose=verbose)
 
         if run_negative:
             tools.run_line_stats_sex(sextractor_catalogue_name=output_file + '_clumpsN',
                                      binning_array=kernels, SNR_min=min_SNR)
 
             tools.crop_doubles(cat_name=output_file + "_clumpsN_minSNR_" + str(min_SNR) + ".cat",
-                               delta_offset_arcsec=delta_offset_arcsec, delta_freq=delta_freq)
+                               delta_offset_arcsec=delta_offset_arcsec,
+                               delta_freq=delta_freq,
+                               verbose=verbose)
 
 
 class MultiCube:

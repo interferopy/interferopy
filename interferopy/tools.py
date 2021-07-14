@@ -1,4 +1,5 @@
 import os
+from tqdm import tqdm
 from copy import deepcopy
 import numpy as np
 import scipy.constants as const
@@ -544,7 +545,7 @@ def run_line_stats_sex(sextractor_catalogue_name,
                                header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING")
 
 
-def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1):
+def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1, verbose=False):
     '''
     Takes a catalogue of clumps and group sources likely from the same target. Tolerance in sky posoition and frequency
     to be given. If the data is not continuum-subtracted, continuum sources will result in multiple groups of clumps
@@ -552,6 +553,7 @@ def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1):
     :param cat_name:
     :param delta_offset_arcsec:
     :param delta_freq:
+    :param verbose: show a progress bar, useful for time-consuming crops
     :return: Writes a copy of the input catalogue, with the added group number for each clump ("_groups.cat"),
     a reduced catalogue with the highest SN detection for each group ("_cropped.cat"), a region files to plot the
     positions of the latter.
@@ -568,7 +570,12 @@ def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1):
     group = -np.ones(len(catalogue_data))
     ncnt = 0
 
-    for i in range(len(catalogue_data)):
+    if verbose:
+        print("Cropping doubles:")
+        iterable = tqdm(range(len(catalogue_data)))
+    else:
+        iterable = range(len(catalogue_data))
+    for i in iterable:
 
         if group[i] < 0:
             group[i] = ncnt
@@ -594,7 +601,12 @@ def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1):
                header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING GROUP")
 
     catalogue_cropped_best = np.zeros((ncnt - 2, len(catalogue_final[0])))
-    for i in range(ncnt - 2):
+    if verbose:
+        print("Filtering highest S/N sources:")
+        iterable = tqdm(range(ncnt -2))
+    else:
+        iterable = range(ncnt - 2)
+    for i in iterable:
         ind = np.where([catalogue_final[:, -1] == i])[1]
         if len(ind) > 1:
             argmax_SN = np.argmax(catalogue_final[ind, 5])
