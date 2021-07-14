@@ -728,7 +728,8 @@ class Cube:
         :min_SNR: min SNR for final catalogues
         :delta_offset_arcsec: maximum offset to match detections in the cube [arcsec]
         :delta_freq: maximum frequency offset to match detections in the cube [GHz]
-        :run_negative: also run findclumps on the negative cube
+        :run_positive: run findclumps on the positive cube
+        :run_negative: run findclumps on the negative cube
         '''
 
         for i in kernels:
