@@ -640,7 +640,8 @@ def fidelity_selection(cat_negative, cat_positive, max_SN=20, plot_name='', i_SN
     hist_N, _ = np.histogram(cat_negative[:, int(i_SN)], bins=bins_edges)
     hist_P, _ = np.histogram(cat_positive[:, int(i_SN)], bins=bins_edges)
 
-    ### if low-SN clumps do not exist (due to Sextractor, cleaning, etc..), trim for cumulative hist to work properly:
+    # if low-SN clumps do not exist (due to Sextractor, cleaning, etc..),
+    # trim for cumulative hist to work properly:
     ind_first_N_clump = int(np.where(hist_N > 0)[0][0])
     hist_N = hist_N[ind_first_N_clump:]
     hist_P = hist_P[ind_first_N_clump:]
@@ -654,7 +655,7 @@ def fidelity_selection(cat_negative, cat_positive, max_SN=20, plot_name='', i_SN
     if plot_name != '':
         fig = plt.figure(figsize=(8, 4))
         ax1 = fig.add_subplot(211)
-        ax1.plot(bins, fidelity, linestyle='steps-mid')
+        ax1.plot(bins, fidelity, drawstyle='steps-mid')
         ax1.fill_between(bins, fidelity, step="mid", alpha=0.4)
         ax1.plot(np.linspace(0, 10, 200), fidelity_function(np.linspace(0, 10, 200), popt[0], popt[1]),
                  color='firebrick')
@@ -662,7 +663,7 @@ def fidelity_selection(cat_negative, cat_positive, max_SN=20, plot_name='', i_SN
         plt.xticks([])
         plt.ylabel('Fidelity')
         ax2 = fig.add_subplot(212)
-        ax2.plot(bins, hist_N, linestyle='steps-mid')
+        ax2.plot(bins, hist_N, drawstyle='steps-mid')
         ax2.set_yscale('log')
         ax2.fill_between(bins, hist_N, step="mid", alpha=0.4)
         plt.vlines(x=sn_thres, ymin=0, ymax=np.max(hist_N) * 1.1, linestyles='--')
