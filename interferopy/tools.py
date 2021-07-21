@@ -634,7 +634,8 @@ def fidelity_function(sn, sigma, c):
     return 0.5 * erf((sn - c) / sigma) + 0.5
 
 
-def fidelity_selection(cat_negative, cat_positive, max_SN=20, plot_name='', i_SN=5, fidelity_threshold=0.6):
+def fidelity_selection(cat_negative, cat_positive, max_SN=20, plot_name='', title_plot='', i_SN=5,
+                       fidelity_threshold=0.6):
     '''
     Fidelity selection following Walter et al. 2016 (https://ui.adsabs.harvard.edu/abs/2016ApJ...833...67W/abstract) to
     select clumps which are more likely to be positive than negative. Plot the selection and threshold if required.
@@ -647,39 +648,52 @@ def fidelity_selection(cat_negative, cat_positive, max_SN=20, plot_name='', i_SN
     :fidelity_threshold: Fidelity threshold above which to select candidates
     :return : Interpolated SN corresponding to the fidlity threshold chosen
     '''
-    bins_edges = np.linspace(0, max_SN, 21)
+    bins_edges = np.linspace(0, max_SN, 31)
     bins = 0.5 * (bins_edges[:-1] + bins_edges[1:])
     hist_N, _ = np.histogram(cat_negative[:, int(i_SN)], bins=bins_edges)
     hist_P, _ = np.histogram(cat_positive[:, int(i_SN)], bins=bins_edges)
 
-    # if low-SN clumps do not exist (due to Sextractor, cleaning, etc..),
-    # trim for cumulative hist to work properly:
+    ### if low-SN clumps do not exist (due to Sextractor, cleaning, etc..), trim for cumulative hist to work properly:
     ind_first_N_clump = int(np.where(hist_N > 0)[0][0])
+
     hist_N = hist_N[ind_first_N_clump:]
     hist_P = hist_P[ind_first_N_clump:]
     bins = bins[ind_first_N_clump:]
 
-    fidelity = 1 - np.clip(np.nan_to_num(hist_N / (hist_P), nan=0), 0, 1)
-    popt, pcorr = curve_fit(fidelity_function, xdata=bins, ydata=fidelity, absolute_sigma=True)
+    hist_N_erf = lambda sn, c, sigma: c * (np.exp(- sn ** 2 / sigma ** 2))
+    popt, _ = curve_fit(hist_N_erf, xdata=bins[np.where(bins > 3)[0][0]:], ydata=hist_N[np.where(bins > 3)[0][0]:],
+    sigma=np.sqrt(hist_N[np.where(bins > 3)[0][0]:] + 1), method='lm', maxfev=1000, p0=[1000, 1])
+
+    hist_N_fitted = hist_N_erf(bins, popt[0], popt[1])
+    # this is a mathematical trick (hist_P+1), but necessary for proper fit
+    fidelity = 1 - np.clip(np.nan_to_num(hist_N_fitted / (hist_P + 1), nan=0), 0, 1)
+    # err_fidelity = np.clip(np.nan_to_num(np.sqrt(hist_N+1)/ (hist_P), nan=0), 0, 1)
+    popt, pcorr = curve_fit(fidelity_function, xdata=bins, ydata=fidelity, method='lm', maxfev=1000, p0=[2, 5])
 
     sn_thres = erfinv((fidelity_threshold - 0.5) / 0.5) * popt[0] + popt[1]
-    print(sn_thres)
+
     if plot_name != '':
-        fig = plt.figure(figsize=(8, 4))
+        fig = plt.figure(figsize=(5, 4))
         ax1 = fig.add_subplot(211)
         ax1.plot(bins, fidelity, drawstyle='steps-mid')
         ax1.fill_between(bins, fidelity, step="mid", alpha=0.4)
-        ax1.plot(np.linspace(0, 10, 200), fidelity_function(np.linspace(0, 10, 200), popt[0], popt[1]),
-                 color='firebrick')
-        plt.vlines(x=sn_thres, ymin=0, ymax=1.1, linestyles='--')
+        ax1.plot(np.linspace(0, max_SN, 200), fidelity_function(np.linspace(0, max_SN, 200), popt[0], popt[1]),
+        color='firebrick')
+        plt.vlines(x=sn_thres, ymin=0, ymax=1.1, linestyles='--', color='k')
         plt.xticks([])
         plt.ylabel('Fidelity')
+        if title_plot != '':
+        plt.title(title_plot)
         ax2 = fig.add_subplot(212)
-        ax2.plot(bins, hist_N, drawstyle='steps-mid')
+        ax2.plot(bins, hist_P, drawstyle='steps-mid')
+        ax2.plot(bins, hist_N_fitted, drawstyle='steps-mid')
         ax2.set_yscale('log')
-        ax2.fill_between(bins, hist_N, step="mid", alpha=0.4)
-        plt.vlines(x=sn_thres, ymin=0, ymax=np.max(hist_N) * 1.1, linestyles='--')
-        plt.ylabel(r'$\log N_{\rm{pos}}$')
+        ax2.fill_between(bins, hist_P, step="mid", alpha=0.4, label='Positive clumps')
+        ax2.fill_between(bins, hist_N, step="mid", alpha=0.4, label='Negative clumps')
+        ax2.legend(fontsize=10)
+        plt.ylim(1e-1, 1e4)
+        plt.vlines(x=sn_thres, ymin=0, ymax=np.max(hist_N) * 1.1, linestyles='--', color='k')
+        plt.ylabel(r'$\log N_{\rm{clumps}}$')
         plt.xlabel('S/N')
 
         plt.subplots_adjust(wspace=None, hspace=None)
