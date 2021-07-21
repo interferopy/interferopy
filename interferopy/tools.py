@@ -678,12 +678,12 @@ def fidelity_selection(cat_negative, cat_positive, max_SN=20, plot_name='', titl
         ax1.plot(bins, fidelity, drawstyle='steps-mid')
         ax1.fill_between(bins, fidelity, step="mid", alpha=0.4)
         ax1.plot(np.linspace(0, max_SN, 200), fidelity_function(np.linspace(0, max_SN, 200), popt[0], popt[1]),
-        color='firebrick')
+                 color='firebrick')
         plt.vlines(x=sn_thres, ymin=0, ymax=1.1, linestyles='--', color='k')
         plt.xticks([])
         plt.ylabel('Fidelity')
         if title_plot != '':
-        plt.title(title_plot)
+            plt.title(title_plot)
         ax2 = fig.add_subplot(212)
         ax2.plot(bins, hist_P, drawstyle='steps-mid')
         ax2.plot(bins, hist_N_fitted, drawstyle='steps-mid')
