@@ -710,26 +710,26 @@ class Cube:
             elif len(sextractor_cat.shape) == 1:
                 sextractor_cat = sextractor_cat.reshape((-1, 6))
 
-                # append k , rms, freq to sextractor_cat
-                sextractor_cat = np.hstack([sextractor_cat, np.ones((len(sextractor_cat), 1)) * k,
-                                            np.ones((len(sextractor_cat), 1)) * rms,
-                                            np.ones((len(sextractor_cat), 1)) * self.freqs[k]])
-                if k == chnbox:
-                    np.savetxt(fname=output_file + '_kw' + str(int(np.abs(minwidth))) + '.cat', X=sextractor_cat,
-                               header="# 1 SNR_WIN                Gaussian-weighted SNR \n \
-                               #   2 FLUX_MAX               Peak flux above background                                 [count] \n \
-                               #   3 X_IMAGE                Object position along x                                    [pixel] \n \
-                               #   4 Y_IMAGE                Object position along y                                    [pixel] \n \
-                               #   5 ALPHA_J2000            Right ascension of barycenter (J2000)                      [deg] \n \
-                               #   6 DELTA_J2000            Declination of barycenter (J2000)                          [deg] \n \
-                               #   7 k                      Central Channel                                            [pixel] \n \
-                               #   8 RMS                    RMS of collapsed channel map                               [Jy/beam] \n \
-                               #   9 FREQ                   CENTRAL FREQUENCY [GHz]                                         [Hz] ")
-                else:
-                    with open(output_file + '_kw' + str(int(np.abs(minwidth))) + '.cat', "ab") as f:
-                        np.savetxt(fname=f, X=sextractor_cat)
+            # append k , rms, freq to sextractor_cat
+            sextractor_cat = np.hstack([sextractor_cat, np.ones((len(sextractor_cat), 1)) * k,
+                                        np.ones((len(sextractor_cat), 1)) * rms,
+                                        np.ones((len(sextractor_cat), 1)) * self.freqs[k]])
+            if k == chnbox:
+                np.savetxt(fname=output_file + '_kw' + str(int(np.abs(minwidth))) + '.cat', X=sextractor_cat,
+                           header="# 1 SNR_WIN                Gaussian-weighted SNR \n \
+                           #   2 FLUX_MAX               Peak flux above background                                 [count] \n \
+                           #   3 X_IMAGE                Object position along x                                    [pixel] \n \
+                           #   4 Y_IMAGE                Object position along y                                    [pixel] \n \
+                           #   5 ALPHA_J2000            Right ascension of barycenter (J2000)                      [deg] \n \
+                           #   6 DELTA_J2000            Declination of barycenter (J2000)                          [deg] \n \
+                           #   7 k                      Central Channel                                            [pixel] \n \
+                           #   8 RMS                    RMS of collapsed channel map                               [Jy/beam] \n \
+                           #   9 FREQ                   CENTRAL FREQUENCY [GHz]                                         [Hz] ")
+            else:
+                with open(output_file + '_kw' + str(int(np.abs(minwidth))) + '.cat', "ab") as f:
+                    np.savetxt(fname=f, X=sextractor_cat)
 
-                os.system('rm ./tmp_findclumps/target_' + name_mask_tmp + '.list')
+            os.system('rm ./tmp_findclumps/target_' + name_mask_tmp + '.list')
 
 
     def findclumps_full(self, output_file, kernels=np.arange(3, 20, 2), rms_region=1. / 4.,
