@@ -715,7 +715,7 @@ class Cube:
                                         np.ones((len(sextractor_cat), 1)) * rms,
                                         np.ones((len(sextractor_cat), 1)) * self.freqs[k]])
             if k == chnbox:
-                np.savetxt(fname=output_file + '_kw' + str(int(np.abs(minwidth))) + '.cat', X=sextractor_cat,
+                np.savetxt(fname=output_file + '_kw' + str(int(minwidth)) + '.cat', X=sextractor_cat,
                            header="# 1 SNR_WIN                Gaussian-weighted SNR \n \
                            #   2 FLUX_MAX               Peak flux above background                                 [count] \n \
                            #   3 X_IMAGE                Object position along x                                    [pixel] \n \
@@ -726,7 +726,7 @@ class Cube:
                            #   8 RMS                    RMS of collapsed channel map                               [Jy/beam] \n \
                            #   9 FREQ                   CENTRAL FREQUENCY [GHz]                                         [Hz] ")
             else:
-                with open(output_file + '_kw' + str(int(np.abs(minwidth))) + '.cat', "ab") as f:
+                with open(output_file + '_kw' + str(int(minwidth)) + '.cat', "ab") as f:
                     np.savetxt(fname=f, X=sextractor_cat)
 
             os.system('rm ./tmp_findclumps/target_' + name_mask_tmp + '.list')
@@ -762,7 +762,7 @@ class Cube:
             kernels_width_neg_and_pos = np.concatenate((-kernels, kernels))
             names = [output_file + '_clumpsN'] * len(kernels) + [output_file + '_clumpsP'] * len(kernels)
             # arguments: (output_file, rms_region, minwidth, sextractor_param_file, clean_tmp, negative)
-            iterable = zip( names, repeat(rms_region), kernels_width_neg_and_pos,
+            iterable = zip( names, repeat(rms_region), np.abs(kernels_width_neg_and_pos),
                             repeat(sextractor_param_file), repeat(True), (np.sign(kernels_width_neg_and_pos)<0))
 
             with ThreadPool(ncore) as p:
