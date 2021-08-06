@@ -634,8 +634,7 @@ def fidelity_function(sn, sigma, c):
     return 0.5 * erf((sn - c) / sigma) + 0.5
 
 
-def fidelity_selection(cat_negative, cat_positive, max_SN=20, plot_name='', title_plot='', i_SN=5,
-                       fidelity_threshold=0.6):
+def fidelity_selection(cat_negative, cat_positive, max_SN=20, i_SN=5, fidelity_threshold=0.6):
     '''
     Fidelity selection following Walter et al. 2016 (https://ui.adsabs.harvard.edu/abs/2016ApJ...833...67W/abstract) to
     select clumps which are more likely to be positive than negative. Plot the selection and threshold if required.
@@ -648,7 +647,7 @@ def fidelity_selection(cat_negative, cat_positive, max_SN=20, plot_name='', titl
     :fidelity_threshold: Fidelity threshold above which to select candidates
     :return : Interpolated SN corresponding to the fidlity threshold chosen
     '''
-    bins_edges = np.linspace(0, max_SN, 31)
+    bins_edges = np.linspace(0, max_SN, 2*max_SN+1)  # integer SN bins at half S/N
     bins = 0.5 * (bins_edges[:-1] + bins_edges[1:])
     hist_N, _ = np.histogram(cat_negative[:, int(i_SN)], bins=bins_edges)
     hist_P, _ = np.histogram(cat_positive[:, int(i_SN)], bins=bins_edges)
@@ -672,33 +671,51 @@ def fidelity_selection(cat_negative, cat_positive, max_SN=20, plot_name='', titl
 
     sn_thres = erfinv((fidelity_threshold - 0.5) / 0.5) * popt[0] + popt[1]
 
+    return bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, hist_N_fitted
+
+
+def fidelity_plot(cat_negative, cat_positive, max_SN=20, i_SN=5, fidelity_threshold=0.6, plot_name='', title_plot=None):
+
+    bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, hist_N_fitted = fidelity_selection(cat_negative, cat_positive, max_SN, i_SN, fidelity_threshold)
+
+    fig = plt.figure(figsize=(5, 4))
+    ax1 = fig.add_subplot(211)
+    # plot fidelity
+    ax1.plot(bins, fidelity, drawstyle='steps-mid')
+    ax1.fill_between(bins, fidelity, step="mid", alpha=0.4)
+    # plot interpolated fidelity
+    xr = np.linspace(bins[0], bins[-1], 200)
+    ax1.plot(xr, fidelity_function(xr, popt[0], popt[1]), color='firebrick')
+    # plot S/N thresh
+    ax1.set_ylim(-0.05, 1.05)
+    ymin, ymax = ax1.get_ylim()
+    plt.vlines(x=sn_thres, ymin=ymin, ymax=ymax, linestyles='--',
+               label=f'F(S/N={sn_thres:.2f})=0.5', color='k')
+    plt.xticks([])
+    plt.ylabel('Fidelity')
+    plt.legend()
+    if title_plot is not None:
+        plt.title(title_plot)
+
+    ax2 = fig.add_subplot(212)
+    # plot positive & negative hist
+    ax2.plot(bins, hist_P, drawstyle='steps-mid')
+    ax2.plot(bins, hist_N_fitted, drawstyle='steps-mid')
+    ax2.set_yscale('log')
+    ax2.fill_between(bins, hist_P, step="mid", alpha=0.4, label='Positive clumps')
+    ax2.fill_between(bins, hist_N, step="mid", alpha=0.4, label='Negative clumps')
+    ax2.legend(fontsize=10)
+    # always show 1
+    plt.ylim(0.7, None)
+    ymin, ymax = ax2.get_ylim()
+    plt.vlines(x=sn_thres, ymin=ymin, ymax=ymax, linestyles='--', color='k')
+    plt.ylabel(r'$\log N$')
+    plt.xlabel('S/N')
+    plt.legend()
+
+    plt.subplots_adjust(wspace=None, hspace=None)
+
     if plot_name != '':
-        fig = plt.figure(figsize=(5, 4))
-        ax1 = fig.add_subplot(211)
-        ax1.plot(bins, fidelity, drawstyle='steps-mid')
-        ax1.fill_between(bins, fidelity, step="mid", alpha=0.4)
-        ax1.plot(np.linspace(0, max_SN, 200), fidelity_function(np.linspace(0, max_SN, 200), popt[0], popt[1]),
-                 color='firebrick')
-        plt.vlines(x=sn_thres, ymin=0, ymax=1.1, linestyles='--', color='k')
-        plt.xticks([])
-        plt.ylabel('Fidelity')
-        if title_plot != '':
-            plt.title(title_plot)
-        ax2 = fig.add_subplot(212)
-        ax2.plot(bins, hist_P, drawstyle='steps-mid')
-        ax2.plot(bins, hist_N_fitted, drawstyle='steps-mid')
-        ax2.set_yscale('log')
-        ax2.fill_between(bins, hist_P, step="mid", alpha=0.4, label='Positive clumps')
-        ax2.fill_between(bins, hist_N, step="mid", alpha=0.4, label='Negative clumps')
-        ax2.legend(fontsize=10)
-        plt.ylim(1e-1, 1e4)
-        plt.vlines(x=sn_thres, ymin=0, ymax=np.max(hist_N) * 1.1, linestyles='--', color='k')
-        plt.ylabel(r'$\log N_{\rm{clumps}}$')
-        plt.xlabel('S/N')
+        plt.savefig(plot_name + '.pdf', bbox_inches="tight", dpi=300)
 
-        plt.subplots_adjust(wspace=None, hspace=None)
-
-        plt.savefig(plot_name + '.pdf', bbox_inches="tight", dpi=600)
-        plt.close()
-
-    return sn_thres
+    return bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, fig, [ax1, ax2]
