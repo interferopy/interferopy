@@ -478,6 +478,7 @@ def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, na
 def sex2deg(ra_hms, dec_dms, frame='icrs'):
     """
     Convert sexagesimal coords (hours:minutes:seconds, degrees:minutes:seconds) to degrees.
+
     :param ra_hms: Right ascentions. String or list of strings.
     :param dec_dms: Declinations. String or list of strings.
     :param frame: Equinox frame. ALMA default is ICRS.
@@ -510,6 +511,7 @@ def arcsec2kpc(z: float = 0):
     """
     Return the number of kiloparsecs contained in one arcsecond at given redshift.
     Use concordance cosmology.
+
     :param z: Redshift of the source
     :return:
     """
@@ -521,6 +523,7 @@ def line_stats_sextractor(catalogue, binning, SNR_min=5):
     '''
     A convenience function extracting high-SNR clumps from a FINDCLUMP(s) output catalogue, adding the binning and
     changing the frequency to GHz, plus reordering for output catalogues
+
     :param catalogue: findclump output
     :param binning: kernel half-width = (minwidth -1)/2
     :param SNR_min: mininum SNR above which to pick clumps
@@ -554,6 +557,7 @@ def run_line_stats_sex(sextractor_catalogue_name,
     '''
     Merges, cleans and reformat clump catalogues (positive or negative) of different kernel widths. Also makes a DS9
     region file for all clumps above a chosen threshold. Made to operate over all kernel half-widths for convenience.
+
     :param sextractor_catalogue_name: Generic catalogue name for the field, excluding kernel half-width
     :param binning_array: array of kernel half-width to process for the given field
     :param SNR_min: Threshold SN to select clump detections
@@ -597,13 +601,14 @@ def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1, verbose=False)
     Takes a catalogue of clumps and group sources likely from the same target. Tolerance in sky posoition and frequency
     to be given. If the data is not continuum-subtracted, continuum sources will result in multiple groups of clumps
     separated by delta_freq. Best used on continuum-subtracted data.
+
     :param cat_name:
     :param delta_offset_arcsec:
     :param delta_freq:
     :param verbose: show a progress bar, useful for time-consuming crops
     :return: Writes a copy of the input catalogue, with the added group number for each clump ("_groups.cat"),
-    a reduced catalogue with the highest SN detection for each group ("_cropped.cat"), a region files to plot the
-    positions of the latter.
+        a reduced catalogue with the highest SN detection for each group ("_cropped.cat"), a region files to plot the
+        positions of the latter.
     '''
 
     delta_offset_deg = delta_offset_arcsec / 3600.
@@ -685,14 +690,14 @@ def fidelity_selection(cat_negative, cat_positive, max_SN=20, i_SN=5, fidelity_t
     '''
     Fidelity selection following Walter et al. 2016 (https://ui.adsabs.harvard.edu/abs/2016ApJ...833...67W/abstract) to
     select clumps which are more likely to be positive than negative. Plot the selection and threshold if required.
+
     :param cat_negative: Catalogue of negative clump detections
     :param cat_positive: Catalogue of positive clump detections
-    :param i_SN: index of the SNR in the catalogues (if catalogues were produced by the internal interferopy findclumps
-    functiono i_SN =5)
+    :param i_SN: index of the SNR in the catalogues (if catalogues were produced by the internal interferopy findclumps function i_SN =5)
     :param max_SN: estimated maximum SN of clumps found in the cube
     :param plot_name: if different than "" plot the fidelity function and threshold and save to given name
     :fidelity_threshold: Fidelity threshold above which to select candidates
-    :return : Interpolated SN corresponding to the fidlity threshold chosen
+    :return: Interpolated SN corresponding to the fidlity threshold chosen
     '''
     bins_edges = np.linspace(0, max_SN, 2*max_SN+1)  # integer SN bins at half S/N
     bins = 0.5 * (bins_edges[:-1] + bins_edges[1:])
