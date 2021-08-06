@@ -146,7 +146,19 @@ class Cube:
                 else:
                     vel_scale = 1
                 self.deltafreq = reffreq * (self.head["CDELT3"] * vel_scale / const.c)
+            elif str(self.head["CTYPE3"]).strip() == "WAVE":
+                _, _, wave_lambda = self.wcs.all_pix2world(int(self.im.shape[0] / 2), int(self.im.shape[1] / 2),
+                                                           range(nch), 0)
+                if str(self.head["CUNIT3"]).strip().lower() == "m":
+                    freqs = 3e5 / wave_lambda * 1e-9  # in GHz
+                    self.deltafreq = 3e5 / self.head["CDELT3"] * 1e-9
+                    self.reffreq = 3e5 / self.head["CRVAL3"] * 1e-9
+                else:
+                    freqs = None
+                    self.log("Warning: unknown 3rd axis units.")
+            # if frequencies are given in radio velocity, convert to freqs
             else:
+                print(str(self.head["CTYPE3"]))
                 freqs = None
                 self.log("Warning: unknown 3rd axis format.")
             self.freqs = freqs

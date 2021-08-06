@@ -4,7 +4,7 @@
 A Python library of common tasks used in the observational radio/mm interferometry data analysis. 
 
 The package was developed to aid in the studies of the interstellar medium in high-redshift quasar host galaxies using emission lines, as well as to create publication quality plots.
-
+The package has been tested and used for ALMA, NOEMA, VLA and JCMT(limited) data.
 ## Installation
 
 Download the code, enter the interferopy folder and run
