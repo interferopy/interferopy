@@ -28,6 +28,7 @@ mpl.rcParams['ytick.minor.size'] = 3.5
 def sigfig(x, digits=2):
     """
     Round a number to a number of significant digits.
+
     :param x: Input number.
     :param digits: Number of significant digits.
     :return:
@@ -41,6 +42,7 @@ def sigfig(x, digits=2):
 def weighted_avg(values, weights):
     """
     Compute weighted average of a masked array. Used in computing mean amplitude vs uv from flagged data.
+
     :param values: Input masked array.
     :param weights: Input weights.
     :return: average, standard_error, standard_deviation
@@ -55,6 +57,7 @@ def weighted_avg(values, weights):
 def gauss(x, a, mu, sigma):
     """
     Gaussian profile. Not normalized.
+
     :param x: Values of x where to compute the profile.
     :param a: Gaussian amplitude (peak height).
     :param mu: Gaussian center (peak position).
@@ -67,6 +70,7 @@ def gauss(x, a, mu, sigma):
 def gausscont(x, b, a, mu, sigma):
     """
     Gaussian profile (not normalized) on top of a constant continuum.
+
     :param x: Values of x where to compute the profile.
     :param b: Constant offset (in y-axis direction).
     :param a: Gaussian amplitude (peak height).
@@ -94,6 +98,7 @@ def sig2fwhm(sigma):
 def kms2mhz(width_kms, freq_ghz):
     """
     Convert channel width in km/s into MHz at the specified reference frequency.
+
     :param width_kms:
     :param freq_ghz:
     :return:
@@ -104,6 +109,7 @@ def kms2mhz(width_kms, freq_ghz):
 def mhz2kms(width_mhz, freq_ghz):
     """
     Convert channel width in MHz into km/s at the specified reference frequency.
+
     :param width_mhz:
     :param freq_ghz:
     :return:
@@ -114,6 +120,7 @@ def mhz2kms(width_mhz, freq_ghz):
 def kms2ghz(width_kms, freq_ghz):
     """
     Convert channel width in km/s into GHz at the specified reference frequency.
+
     :param width_kms:
     :param freq_ghz:
     :return:
@@ -124,6 +131,7 @@ def kms2ghz(width_kms, freq_ghz):
 def ghz2kms(width_ghz, freq_ghz):
     """
     Convert channel width in GHz into km/s at the specified reference frequency.
+
     :param width_ghz:
     :param freq_ghz:
     :return:
@@ -134,6 +142,7 @@ def ghz2kms(width_ghz, freq_ghz):
 def calcrms(arr, fitgauss=False, around_zero=True, clip_sigma=3, maxiter=20):
     """
     Calculate rms by iteratively disregarding outlier pixels (beyond clip_sigma x rms values).
+
     :param arr: Input array.
     :param fitgauss: If True, Gaussian will be fitted onto the distribution of negative pixels.
     :param around_zero: Assume no systematic offsets, i.e., noise oscillates around zero.
@@ -189,6 +198,7 @@ def calcrms(arr, fitgauss=False, around_zero=True, clip_sigma=3, maxiter=20):
 def beam_volume_sr(bmaj, bmin=None):
     """
     Compute Gaussian beam volume.
+
     :param bmaj: Major axis FWHM in arcsec.
     :param bmin: Minor axis FWHM in arcsec. If not provided, will assume circular beam bmin=bmaj.
     :return: Beam volume in steradians.
@@ -205,6 +215,7 @@ def beam_volume_sr(bmaj, bmin=None):
 def surf_temp(freq, rms, theta):
     """
     Copmute surface brightness temperature sensitivity in Kelvins. Used to compare radio map sensitivities.
+
     :param freq: Observed frequency in GHz.
     :param rms: Noise in the map in Jy/beam.
     :param theta: Beam FWHM in arcsec. Assumes circular beam.
@@ -218,6 +229,7 @@ def surf_temp(freq, rms, theta):
 def blackbody(nu, temp):
     """
     Planck's law for black body emission, per unit frequency.
+
     :param nu: Rest frame frequency in Hz.
     :param temp: Temperature in K.
     :return: Emission in units of W / (m^2 Hz)
@@ -228,6 +240,7 @@ def blackbody(nu, temp):
 def dust_lum(nu_rest, Mdust, Tdust, beta):
     """
     Compute intrinsic dust luminosity at specific rest frame frequency assuming modified black body emission.
+
     :param nu_rest: Rest frame frequency in Hz.
     :param Mdust: Total dust mass in kg.
     :param Tdust:  Dust temperature in K.
@@ -251,6 +264,7 @@ def dust_lum(nu_rest, Mdust, Tdust, beta):
 def dust_sobs(nu_obs, z, mass_dust, temp_dust, beta, cmb_contrast=True, cmb_heating=True):
     """
     Compute observed flux density of the dust continuum, assuming a modified black body.
+
     :param nu_obs: Observed frame frequency in Hz.
     :param z: Redshift of the source.
     :param mass_dust: Total dust mass in kg.

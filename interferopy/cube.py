@@ -690,7 +690,7 @@ class Cube:
     def findclumps_1kernel(self, output_file, rms_region=1./4., minwidth=3,
                            sextractor_param_file='default.sex',
                            clean_tmp=True, negative=False, verbose=False):
-        '''
+        """
         FINDCLUMP(s) algorithm (Decarli+2014,Walter+2016). Takes the cube image and outputs the 3d (x,y,wavelength) position
         of clumps of a minimum SN specified. Works by using a top-hat filter on a rebinned version of the datacube.
         :param output_file: relative/absolute path to the outpute catalogue
@@ -700,7 +700,7 @@ class Cube:
         :param minwidth: Number of channels to bin
         :param clean_tmp: Whether to remove or not the temporary files created by Sextractor
         :return:
-        '''
+        """
         tmpdir = './tmp_findclumps/'
         if not os.path.exists(tmpdir):
             os.makedirs(tmpdir)
