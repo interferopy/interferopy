@@ -76,7 +76,10 @@ class Cube:
         Read the fits file and extract common useful data into Cube class attributes.
         """
         self.log("Open " + self.filename)
-        self.hdu = fits.open(self.filename)
+        ##LAB this needs some thought
+        hdu = fits.open(self.filename)
+        self.hdu = hdu.__deepcopy__()
+        del hdu
         self.head = self.hdu[0].header
         self.pixsize = self.head["cdelt2"] * 3600  # arcsec, assumes square pixels
 
@@ -107,7 +110,7 @@ class Cube:
             self.head['CDELT3'] = 1
             self.head['CRPIX3'] = 0
             naxis = 3
-            self.log("Warning: 2maps may have incorrect pixsize/beamvol. Please replace!")
+            self.log("Warning: 2D maps may have incorrect pixsize/beamvol. Please replace!")
         else:
             raise RuntimeError("Invalid number of cube dimensions.")
         self.im = image
@@ -491,7 +494,8 @@ class Cube:
         :return: value or (value, error)
         """
 
-        flux, err, _, _ = self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=channel, calc_error=calc_error)
+        flux, err, _, _ = self.spectrum(ra=ra, dec=dec, radius=radius, freq=freq, channel=channel,
+                                        calc_error=calc_error)
         if calc_error:
             return flux, err
         else:
@@ -576,11 +580,11 @@ class Cube:
 
         # old loop version, human readable, but super slow in execution for large apertures and lots of pixels
         # for i in range(len(bins)-1):
-        #     #w=(distances>=bins[i]) & (distances<bins[i+1]) #annulus
-        #     w=(distances>=0) & (distances<bins[i+1]) # aperture (cumulative)
-        #     npix[i]=np.sum(w)
-        #     flux[i]=np.sum(im[w])/beamvol
-        #     err[i]=rms*np.sqrt(npix[i]/beamvol) # rms times sqrt of beams used for integration
+        # 	#w=(distances>=bins[i]) & (distances<bins[i+1]) #annulus
+        # 	w=(distances>=0) & (distances<bins[i+1]) # aperture (cumulative)
+        # 	npix[i]=np.sum(w)
+        # 	flux[i]=np.sum(im[w])/beamvol
+        # 	err[i]=rms*np.sqrt(npix[i]/beamvol) # rms times sqrt of beams used for integration
 
         return radius, flux, err, npix
 
@@ -657,7 +661,7 @@ class Cube:
         of clumps of a minimum SN specified. Works by using a top-hat filter on a rebinned version of the datacube.
         :param output_file: relative/absolute path to the outpute catalogue
         :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord]. If none, takes the central
-                      25% pixels (square)
+                            25% pixels (square)
         :param sn_threshold: Minimum SN of peaks to retain
         :param minwidth: Number of channels to bin
         :param clean_tmp: Whether to remove or not the temporary files created by Sextractor
@@ -667,7 +671,9 @@ class Cube:
         if not exists('./tmp_findclumps/'):
             os.system('mkdir ./tmp_findclumps')
 
-        assert not (isfile(output_file)), 'Output file already exists - please delete or change name!'
+        ##LAB it would be useful if we print output file name here
+        assert not (isfile(output_file + '_kw' + str(
+            int(minwidth)) + '.cat')), 'Output file already exists - please delete or change name!'
         if minwidth % 2 == 1:
             chnbox = int((minwidth - 1) / 2.0)
         else:
@@ -696,17 +702,26 @@ class Cube:
 
             hdu = fits.PrimaryHDU(data=im_channel_sum, header=self.head)
             hdul = fits.HDUList([hdu])
-            hdul.writeto('./tmp_findclumps/mask_' + str(k) + '.fits', overwrite=True)
+            if negative == True:
+                name_mask_tmp = 'mask_kernel' + str(minwidth) + '_I' + str(k) + '_negative'
+            else:
+                name_mask_tmp = 'mask_kernel' + str(minwidth) + '_I' + str(k) + '_positive'
+            hdul.writeto('./tmp_findclumps/' + name_mask_tmp + '.fits', overwrite=True)
+
             # run Sextractor
-            os.system('sex ./tmp_findclumps/mask_' + str(k) + '.fits -c ' + sextractor_param_file)
+            os.system(
+                'sex ./tmp_findclumps/' + name_mask_tmp + '.fits' + ' -c ' + sextractor_param_file + ' -CATALOG_NAME ./tmp_findclumps/target_' + name_mask_tmp + '.list  -VERBOSE_TYPE QUIET')
             if clean_tmp:
-                os.system('rm ./tmp_findclumps/mask_' + str(k) + '.fits')
+                os.system('rm ./tmp_findclumps/' + name_mask_tmp + '.fits')
             # read output
-            sextractor_cat = np.genfromtxt('./target.list', skip_header=6)
+            sextractor_cat = np.genfromtxt('./tmp_findclumps/target_' + name_mask_tmp + '.list', skip_header=6)
             if sextractor_cat.shape == (0,):
+                if clean_tmp:
+                    os.system('rm ./tmp_findclumps/target_' + name_mask_tmp + '.list')
                 continue
             elif len(sextractor_cat.shape) == 1:
                 sextractor_cat = sextractor_cat.reshape((-1, 6))
+
             # append k , rms, freq to sextractor_cat
             sextractor_cat = np.hstack([sextractor_cat, np.ones((len(sextractor_cat), 1)) * k,
                                         np.ones((len(sextractor_cat), 1)) * rms,
@@ -714,28 +729,28 @@ class Cube:
             if k == chnbox:
                 np.savetxt(fname=output_file + '_kw' + str(int(minwidth)) + '.cat', X=sextractor_cat,
                            header="# 1 SNR_WIN                Gaussian-weighted SNR \n \
-                        #   2 FLUX_MAX               Peak flux above background                                 [count] \n \
-                        #   3 X_IMAGE                Object position along x                                    [pixel] \n \
-                        #   4 Y_IMAGE                Object position along y                                    [pixel] \n \
-                        #   5 ALPHA_J2000            Right ascension of barycenter (J2000)                      [deg] \n \
-                        #   6 DELTA_J2000            Declination of barycenter (J2000)                          [deg] \n \
-                        #   7 k                      Central Channel                                            [pixel] \n \
-                        #   8 RMS                    RMS of collapsed channel map                               [Jy/beam] \n \
-                        #   9 FREQ                   CENTRAL FREQUENCY [GHz]                                         [Hz] ")
+                           #   2 FLUX_MAX               Peak flux above background                                 [count] \n \
+                           #   3 X_IMAGE                Object position along x                                    [pixel] \n \
+                           #   4 Y_IMAGE                Object position along y                                    [pixel] \n \
+                           #   5 ALPHA_J2000            Right ascension of barycenter (J2000)                      [deg] \n \
+                           #   6 DELTA_J2000            Declination of barycenter (J2000)                          [deg] \n \
+                           #   7 k                      Central Channel                                            [pixel] \n \
+                           #   8 RMS                    RMS of collapsed channel map                               [Jy/beam] \n \
+                           #   9 FREQ                   CENTRAL FREQUENCY [GHz]                                         [Hz] ")
             else:
                 with open(output_file + '_kw' + str(int(minwidth)) + '.cat', "ab") as f:
                     np.savetxt(fname=f, X=sextractor_cat)
-        if clean_tmp:
-            os.system('rm ./target.list')
-            os.system('rmdir ./tmp_findclumps')
+
+            if clean_tmp:
+                os.system('rm ./tmp_findclumps/target_' + name_mask_tmp + '.list')
 
     def findclumps_full(self, output_file, kernels=np.arange(3, 20, 2), rms_region=1. / 4.,
                         sextractor_param_file='default.sex', clean_tmp=True, min_SNR=0,
-                        delta_offset_arcsec=2, delta_freq=0.1,
+                        delta_offset_arcsec=2, delta_freq=0.1, ncore=1,  ##LAB ncores (plural?)
                         run_positive=True, run_negative=True,
                         verbose=False):
         '''
-        Run the findclump search for different kernels sizes, on the positive (and negative) cube(s).
+        Run the findclump search for different kernels sizes, on the positive and/or negative cube(s).
         Crops doubles and trim candidates above a mininum SNR. See findclumps_1kernel().
         :param output_file: relative/absolute path to the outpute catalogue
         :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord]. If none, takes the central
@@ -747,21 +762,40 @@ class Cube:
         :delta_freq: maximum frequency offset to match detections in the cube [GHz]
         :run_positive: run findclumps on the positive cube
         :run_negative: run findclumps on the negative cube
-        :verbose: increase verbosity (if True, better mute sextractor by setting ``VERBOSE_TYPE`` to ``QUIET`` in ``default.sex``)
+        :verbose: increase verbosity
         '''
+        if ncore == 1:
+            for i in kernels:
+                if run_positive:
+                    self.findclumps_1kernel(output_file=output_file + '_clumpsP', negative=False, minwidth=i,
+                                            clean_tmp=clean_tmp, rms_region=rms_region,
+                                            sextractor_param_file=sextractor_param_file,
+                                            verbose=verbose)
+                if run_negative:
+                    self.findclumps_1kernel(output_file=output_file + '_clumpsN', negative=True, minwidth=i,
+                                            clean_tmp=clean_tmp, rms_region=rms_region,
+                                            sextractor_param_file=sextractor_param_file,
+                                            verbose=verbose)
 
-        for i in kernels:
-            if run_positive:
-                self.findclumps_1kernel(output_file=output_file + '_clumpsP', negative=False, minwidth=i,
-                                        clean_tmp=clean_tmp, rms_region=rms_region,
-                                        sextractor_param_file=sextractor_param_file,
-                                        verbose=verbose)
+        else:
+            if not run_positive or not run_negative:
+                raise RuntimeError(
+                    "Multiprocessing only implemented for combined positive and negative search.")  ##LAB probably the easiest for now
+            from multiprocessing.dummy import Pool as ThreadPool
+            from itertools import repeat
 
-            if run_negative:
-                self.findclumps_1kernel(output_file=output_file + '_clumpsN', negative=True, minwidth=i,
-                                        clean_tmp=clean_tmp, rms_region=rms_region,
-                                        sextractor_param_file=sextractor_param_file,
-                                        verbose=verbose)
+            kernels = np.atleast_1d(kernels)  ##LAB kernels has to be an array
+            kernels_width_neg_and_pos = np.concatenate((-kernels, kernels))
+            names = [output_file + '_clumpsN'] * len(kernels) + [output_file + '_clumpsP'] * len(kernels)
+            # arguments: (output_file, rms_region, minwidth, sextractor_param_file, clean_tmp, negative)
+            iterable = zip(names, repeat(rms_region), np.abs(kernels_width_neg_and_pos),
+                           repeat(sextractor_param_file), repeat(True), (np.sign(kernels_width_neg_and_pos) < 0))
+
+            with ThreadPool(ncore) as p:
+                p.starmap(self.findclumps_1kernel, iterable)
+                p.close()
+                p.join()
+            print('Multi-threaded Findclumps done, running line stats and cropping doubles...')
 
         if run_positive:
             tools.run_line_stats_sex(sextractor_catalogue_name=output_file + '_clumpsP',
@@ -821,7 +855,7 @@ class MultiCube:
         """
 
         # these are standard suffixes from CASA tclean output (except "dirty")
-        # gildas output has different naming conventions, which are not implemnted here
+        # gildas output has different naming conventions, which are not implemented here
         keylist = ["image", "residual", "dirty", "pb", "model", "psf", "image.pbcor", "clean.comp"]
         self.cubes = dict(zip(keylist, [None] * len(keylist)))
         self.basename = None
@@ -992,7 +1026,7 @@ class MultiCube:
         # generate clean component cube (this is not a standard CASA output)
         # actually it is not necessary to have the full cube for residual scaling
         # if self["clean.comp"] is None:
-        #     self.make_clean_comp()
+        # 	self.make_clean_comp()
 
         shapes_equal = self["image"].im.shape == self["dirty"].im.shape == self["residual"].im.shape
         if not shapes_equal:
@@ -1087,7 +1121,8 @@ class MultiCube:
         # apply PB correction if possible
         if apply_pb_corr and "pb" in self.loaded_cubes:
             self.log("Correcting flux and err for PB response.")
-            pb, _, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq, calc_error=False)
+            pb, _, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq,
+                                              calc_error=False)
             flux = flux / pb
             err = err / pb
             peak_sb = peak_sb / pb
@@ -1188,7 +1223,8 @@ class MultiCube:
         if apply_pb_corr and "pb" in self.loaded_cubes:
             self.log("Correcting flux and err for PB response.")
             # will return a single pb value, because channel is set
-            pb, _, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq, calc_error=False)
+            pb, _, _, _ = self["pb"].spectrum(ra=ra, dec=dec, px=px, py=py, channel=channel, freq=freq,
+                                              calc_error=False)
             pb = np.full(len(flux_image), pb)
             flux = np.array(flux / pb)
             err = np.array(err / pb)
