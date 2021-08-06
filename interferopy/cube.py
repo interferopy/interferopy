@@ -76,10 +76,7 @@ class Cube:
         Read the fits file and extract common useful data into Cube class attributes.
         """
         self.log("Open " + self.filename)
-        ##LAB this needs some thought
-        hdu = fits.open(self.filename)
-        self.hdu = hdu.__deepcopy__()
-        del hdu
+        self.hdu = fits.open(self.filename)
         self.head = self.hdu[0].header
         self.pixsize = self.head["cdelt2"] * 3600  # arcsec, assumes square pixels
 
@@ -671,9 +668,9 @@ class Cube:
         if not exists('./tmp_findclumps/'):
             os.system('mkdir ./tmp_findclumps')
 
-        ##LAB it would be useful if we print output file name here
         assert not (isfile(output_file + '_kw' + str(
-            int(minwidth)) + '.cat')), 'Output file already exists - please delete or change name!'
+            int(minwidth)) + '.cat')), 'Output file "' + output_file + '_kw' + str(
+            int(minwidth)) + '" already exists - please delete or change name!'
         if minwidth % 2 == 1:
             chnbox = int((minwidth - 1) / 2.0)
         else:
@@ -746,7 +743,7 @@ class Cube:
 
     def findclumps_full(self, output_file, kernels=np.arange(3, 20, 2), rms_region=1. / 4.,
                         sextractor_param_file='default.sex', clean_tmp=True, min_SNR=0,
-                        delta_offset_arcsec=2, delta_freq=0.1, ncore=1,  ##LAB ncores (plural?)
+                        delta_offset_arcsec=2, delta_freq=0.1, ncores=1,
                         run_positive=True, run_negative=True,
                         verbose=False):
         '''
@@ -764,7 +761,7 @@ class Cube:
         :run_negative: run findclumps on the negative cube
         :verbose: increase verbosity
         '''
-        if ncore == 1:
+        if ncores == 1:
             for i in kernels:
                 if run_positive:
                     self.findclumps_1kernel(output_file=output_file + '_clumpsP', negative=False, minwidth=i,
@@ -780,18 +777,18 @@ class Cube:
         else:
             if not run_positive or not run_negative:
                 raise RuntimeError(
-                    "Multiprocessing only implemented for combined positive and negative search.")  ##LAB probably the easiest for now
+                    "Multithreading only implemented for combined positive and negative search.")  ##LAB probably the easiest for now
             from multiprocessing.dummy import Pool as ThreadPool
             from itertools import repeat
 
-            kernels = np.atleast_1d(kernels)  ##LAB kernels has to be an array
+            kernels = np.atleast_1d(kernels)
             kernels_width_neg_and_pos = np.concatenate((-kernels, kernels))
             names = [output_file + '_clumpsN'] * len(kernels) + [output_file + '_clumpsP'] * len(kernels)
             # arguments: (output_file, rms_region, minwidth, sextractor_param_file, clean_tmp, negative)
             iterable = zip(names, repeat(rms_region), np.abs(kernels_width_neg_and_pos),
                            repeat(sextractor_param_file), repeat(True), (np.sign(kernels_width_neg_and_pos) < 0))
 
-            with ThreadPool(ncore) as p:
+            with ThreadPool(ncores) as p:
                 p.starmap(self.findclumps_1kernel, iterable)
                 p.close()
                 p.join()
@@ -814,7 +811,6 @@ class Cube:
                                delta_offset_arcsec=delta_offset_arcsec,
                                delta_freq=delta_freq,
                                verbose=verbose)
-
 
 class MultiCube:
     """
@@ -1216,7 +1212,7 @@ class MultiCube:
 
         epsilon = flux_clean / (flux_dirty - flux_residual)
         flux = np.array(epsilon * flux_dirty)
-        err = epsilon * err  # TODO: should the error estimate be scaled with epsilon as well?
+        err = epsilon * err
         nbeam = npix / self["image"].beamvol[channel]
 
         # apply PB correction if possible
