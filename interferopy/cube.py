@@ -730,30 +730,39 @@ class Cube:
         else:
             iterable = range(chnbox, nax1 - chnbox - 1)
         for k in iterable:
+            # prep filenames
+            if negative:
+                name_mask_tmp = 'mask_kernel' + str(minwidth) + '_I' + str(k) + '_negative'
+            else:
+                name_mask_tmp = 'mask_kernel' + str(minwidth) + '_I' + str(k) + '_positive'
+
+            tmp_fits = './tmp_findclumps/' + name_mask_tmp + '.fits'
+            tmp_list = './tmp_findclumps/target_' + name_mask_tmp + '.list'
+
             # collapsing cube over chosen channel number, saving rms in center
             im_channel_sum = np.nansum(cube[k - chnbox:k + chnbox + 1, :, :], axis=0)
             rms = np.nanstd(
                 im_channel_sum[int(nax2 / 2) - int(nax2 * rms_region) - 1:int(nax2 / 2) + int(nax2 * rms_region),
                 int(nax3 / 2) - int(nax3 * rms_region) - 1:int(nax3 / 2) + int(nax3 * rms_region)])
 
+            # create fitsfile
             hdu = fits.PrimaryHDU(data=im_channel_sum, header=self.head)
             hdul = fits.HDUList([hdu])
-            if negative == True:
-                name_mask_tmp = 'mask_kernel' + str(minwidth) + '_I' + str(k) + '_negative'
-            else:
-                name_mask_tmp = 'mask_kernel' + str(minwidth) + '_I' + str(k) + '_positive'
-            hdul.writeto('./tmp_findclumps/' + name_mask_tmp + '.fits', overwrite=True)
+            hdul.writeto(tmp_fits, overwrite=True)
 
             # run Sextractor
-            os.system(
-                'sex ./tmp_findclumps/' + name_mask_tmp + '.fits' + ' -c ' + sextractor_param_file + ' -CATALOG_NAME ./tmp_findclumps/target_' + name_mask_tmp + '.list  -VERBOSE_TYPE QUIET')
-            if clean_tmp:
-                os.system('rm ./tmp_findclumps/' + name_mask_tmp + '.fits')
+            os.system('sex ' + tmp_fits + ' -c ' + sextractor_param_file + ' -CATALOG_NAME ' + tmp_list + ' -VERBOSE_TYPE QUIET')
+
             # read output
-            sextractor_cat = np.genfromtxt('./tmp_findclumps/target_' + name_mask_tmp + '.list', skip_header=6)
+            sextractor_cat = np.genfromtxt(tmp_list, skip_header=6)
+
+            # cleanup before processing
+            if clean_tmp:
+                os.system('rm ' + tmp_fits)
+                os.system('rm ' + tmp_list)
+
+            # process output
             if sextractor_cat.shape == (0,):
-                if clean_tmp:
-                    os.system('rm ./tmp_findclumps/target_' + name_mask_tmp + '.list')
                 continue
             elif len(sextractor_cat.shape) == 1:
                 sextractor_cat = sextractor_cat.reshape((-1, 6))
@@ -777,8 +786,6 @@ class Cube:
                 with open(output_file + '_kw' + str(int(minwidth)) + '.cat', "ab") as f:
                     np.savetxt(fname=f, X=sextractor_cat)
 
-            if clean_tmp:
-                os.system('rm ./tmp_findclumps/target_' + name_mask_tmp + '.list')
 
     def findclumps_full(self, output_file, kernels=np.arange(3, 20, 2), rms_region=1. / 4.,
                         sextractor_param_file='default.sex', clean_tmp=True, min_SNR=0,
