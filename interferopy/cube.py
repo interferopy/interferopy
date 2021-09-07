@@ -5,8 +5,6 @@ from astropy.io import fits
 from astropy.table import Table
 from astropy import wcs
 import scipy.constants as const
-from os.path import isfile, exists
-
 import interferopy.tools as tools
 
 
@@ -703,11 +701,11 @@ class Cube:
         :param clean_tmp: Whether to remove or not the temporary files created by Sextractor
         :return:
         '''
+        tmpdir = './tmp_findclumps/'
+        if not os.path.exists(tmpdir):
+            os.makedirs(tmpdir)
 
-        if not exists('./tmp_findclumps/'):
-            os.system('mkdir ./tmp_findclumps')
-
-        assert not (isfile(output_file + '_kw' + str(
+        assert not (os.path.isfile(output_file + '_kw' + str(
             int(minwidth)) + '.cat')), 'Output file "' + output_file + '_kw' + str(
             int(minwidth)) + '" already exists - please delete or change name!'
         if minwidth % 2 == 1:
@@ -736,8 +734,8 @@ class Cube:
             else:
                 name_mask_tmp = 'mask_kernel' + str(minwidth) + '_I' + str(k) + '_positive'
 
-            tmp_fits = './tmp_findclumps/' + name_mask_tmp + '.fits'
-            tmp_list = './tmp_findclumps/target_' + name_mask_tmp + '.list'
+            tmp_fits = os.path.join(tmpdir, name_mask_tmp + '.fits')
+            tmp_list = os.path.join(tmpdir, 'target_' + name_mask_tmp + '.list')
 
             # collapsing cube over chosen channel number, saving rms in center
             im_channel_sum = np.nansum(cube[k - chnbox:k + chnbox + 1, :, :], axis=0)
@@ -758,8 +756,9 @@ class Cube:
 
             # cleanup before processing
             if clean_tmp:
-                os.system('rm ' + tmp_fits)
-                os.system('rm ' + tmp_list)
+                os.remove(tmp_fits)
+                os.remove(tmp_list)
+                os.rmdir(tmpdir)
 
             # process output
             if sextractor_cat.shape == (0,):
@@ -785,7 +784,6 @@ class Cube:
             else:
                 with open(output_file + '_kw' + str(int(minwidth)) + '.cat', "ab") as f:
                     np.savetxt(fname=f, X=sextractor_cat)
-
 
     def findclumps_full(self, output_file, kernels=np.arange(3, 20, 2), rms_region=1. / 4.,
                         sextractor_param_file='default.sex', clean_tmp=True, min_SNR=0,
