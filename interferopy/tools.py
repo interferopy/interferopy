@@ -700,7 +700,8 @@ def fidelity_plot(cat_negative, cat_positive, max_SN=20, i_SN=5, fidelity_thresh
     ax2 = fig.add_subplot(212)
     # plot positive & negative hist
     ax2.plot(bins, hist_P, drawstyle='steps-mid')
-    ax2.plot(bins, hist_N_fitted, drawstyle='steps-mid')
+    ax2.plot(bins, hist_N, drawstyle='steps-mid')
+    ax2.plot(bins, hist_N_fitted)
     ax2.set_yscale('log')
     ax2.fill_between(bins, hist_P, step="mid", alpha=0.4, label='Positive clumps')
     ax2.fill_between(bins, hist_N, step="mid", alpha=0.4, label='Negative clumps')
