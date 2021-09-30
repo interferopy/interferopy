@@ -13,6 +13,8 @@ from astropy.coordinates import SkyCoord
 from scipy.special import erf, erfinv
 from matplotlib import pyplot as plt
 import matplotlib as mpl
+from scipy import integrate
+from scipy.constants import c
 
 mpl.rcParams['xtick.direction'] = 'in'
 mpl.rcParams['ytick.direction'] = 'in'
@@ -280,6 +282,37 @@ def dust_sobs(nu_obs, z, mass_dust, temp_dust, beta, cmb_contrast=True, cmb_heat
     flux_obs = f_cmb * (1 + z) / (4 * np.pi * dl ** 2) * dust_lum(nu_rest, mass_dust, temp_dustz, beta)
 
     return flux_obs
+
+def dust_cont_integrate(dust_mass, dust_temp, dust_beta, print=False):
+    """
+    Integrate over the IR spectral energy distribution. Calculate SFR based on Kennicut relation.
+    Prints output if print parameter==True and returns values.
+    :param dust_mass: in kg
+    :param dust_temp: in K
+    :param dust_beta: dimensionless
+    :param print:
+    :return: lum_tir (8-1000 microns), lum_fir (42.5-122.5 microns) in solLum , SFR-K98, SFR-K12 in Msun/yr
+    """
+
+    # Total IR is 8 - 1000 microns
+    lum_tir = integrate.quad(lambda x: dust_lum(x, dust_mass, dust_temp, dust_beta), c / (1000e-6), c / (8e-6))
+
+    # Far IR is 42.5 - 122.5 microns
+    lum_fir = integrate.quad(lambda x: dust_lum(x, dust_mass, dust_temp, dust_beta), c / (122.5e-6), c / (42.5e-6))
+
+    # Kennicutt+98 relation
+    sfr_Kennicutt98 = lum_tir[0] * u.W.to(u.solLum) * 1e-10
+
+    # Kennicutt+12 relation scaled to Chabrier IMF
+    sfr_Kennicutt12 = 10 ** (np.log10(lum_tir[0] * u.W.to(u.erg / u.s)) - 43.41) / 1.7
+
+    if print:
+        print("Ltir (10^12 Lsol) = ", sigfig(lum_tir[0] * u.W.to(u.solLum) * 1e-12, 3))
+        print("Lfir (10^12 Lsol) =", sigfig(lum_fir[0] * u.W.to(u.solLum) * 1e-12, 3))
+        print("SFR_Kennicutt98 (Msol/yr)", sigfig(sfr_Kennicutt98, 3))
+        print("SFR_Kennicutt12 (Msol/yr)", sigfig(sfr_Kennicutt12, 3))
+
+    return lum_tir,lum_fir, sfr_Kennicutt98,sfr_Kennicutt12
 
 
 def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, naxis=100, interpol=True):
