@@ -28,6 +28,7 @@ mpl.rcParams['ytick.minor.size'] = 3.5
 def sigfig(x, digits=2):
     """
     Round a number to a number of significant digits.
+
     :param x: Input number.
     :param digits: Number of significant digits.
     :return:
@@ -41,6 +42,7 @@ def sigfig(x, digits=2):
 def weighted_avg(values, weights):
     """
     Compute weighted average of a masked array. Used in computing mean amplitude vs uv from flagged data.
+
     :param values: Input masked array.
     :param weights: Input weights.
     :return: average, standard_error, standard_deviation
@@ -55,6 +57,7 @@ def weighted_avg(values, weights):
 def gauss(x, a, mu, sigma):
     """
     Gaussian profile. Not normalized.
+
     :param x: Values of x where to compute the profile.
     :param a: Gaussian amplitude (peak height).
     :param mu: Gaussian center (peak position).
@@ -67,6 +70,7 @@ def gauss(x, a, mu, sigma):
 def gausscont(x, b, a, mu, sigma):
     """
     Gaussian profile (not normalized) on top of a constant continuum.
+
     :param x: Values of x where to compute the profile.
     :param b: Constant offset (in y-axis direction).
     :param a: Gaussian amplitude (peak height).
@@ -94,6 +98,7 @@ def sig2fwhm(sigma):
 def kms2mhz(width_kms, freq_ghz):
     """
     Convert channel width in km/s into MHz at the specified reference frequency.
+
     :param width_kms:
     :param freq_ghz:
     :return:
@@ -104,6 +109,7 @@ def kms2mhz(width_kms, freq_ghz):
 def mhz2kms(width_mhz, freq_ghz):
     """
     Convert channel width in MHz into km/s at the specified reference frequency.
+
     :param width_mhz:
     :param freq_ghz:
     :return:
@@ -114,6 +120,7 @@ def mhz2kms(width_mhz, freq_ghz):
 def kms2ghz(width_kms, freq_ghz):
     """
     Convert channel width in km/s into GHz at the specified reference frequency.
+
     :param width_kms:
     :param freq_ghz:
     :return:
@@ -124,6 +131,7 @@ def kms2ghz(width_kms, freq_ghz):
 def ghz2kms(width_ghz, freq_ghz):
     """
     Convert channel width in GHz into km/s at the specified reference frequency.
+
     :param width_ghz:
     :param freq_ghz:
     :return:
@@ -134,6 +142,7 @@ def ghz2kms(width_ghz, freq_ghz):
 def calcrms(arr, fitgauss=False, around_zero=True, clip_sigma=3, maxiter=20):
     """
     Calculate rms by iteratively disregarding outlier pixels (beyond clip_sigma x rms values).
+
     :param arr: Input array.
     :param fitgauss: If True, Gaussian will be fitted onto the distribution of negative pixels.
     :param around_zero: Assume no systematic offsets, i.e., noise oscillates around zero.
@@ -189,6 +198,7 @@ def calcrms(arr, fitgauss=False, around_zero=True, clip_sigma=3, maxiter=20):
 def beam_volume_sr(bmaj, bmin=None):
     """
     Compute Gaussian beam volume.
+
     :param bmaj: Major axis FWHM in arcsec.
     :param bmin: Minor axis FWHM in arcsec. If not provided, will assume circular beam bmin=bmaj.
     :return: Beam volume in steradians.
@@ -205,6 +215,7 @@ def beam_volume_sr(bmaj, bmin=None):
 def surf_temp(freq, rms, theta):
     """
     Copmute surface brightness temperature sensitivity in Kelvins. Used to compare radio map sensitivities.
+
     :param freq: Observed frequency in GHz.
     :param rms: Noise in the map in Jy/beam.
     :param theta: Beam FWHM in arcsec. Assumes circular beam.
@@ -218,6 +229,7 @@ def surf_temp(freq, rms, theta):
 def blackbody(nu, temp):
     """
     Planck's law for black body emission, per unit frequency.
+
     :param nu: Rest frame frequency in Hz.
     :param temp: Temperature in K.
     :return: Emission in units of W / (m^2 Hz)
@@ -228,6 +240,7 @@ def blackbody(nu, temp):
 def dust_lum(nu_rest, Mdust, Tdust, beta):
     """
     Compute intrinsic dust luminosity at specific rest frame frequency assuming modified black body emission.
+
     :param nu_rest: Rest frame frequency in Hz.
     :param Mdust: Total dust mass in kg.
     :param Tdust:  Dust temperature in K.
@@ -251,6 +264,7 @@ def dust_lum(nu_rest, Mdust, Tdust, beta):
 def dust_sobs(nu_obs, z, mass_dust, temp_dust, beta, cmb_contrast=True, cmb_heating=True):
     """
     Compute observed flux density of the dust continuum, assuming a modified black body.
+
     :param nu_obs: Observed frame frequency in Hz.
     :param z: Redshift of the source.
     :param mass_dust: Total dust mass in kg.
@@ -464,6 +478,7 @@ def stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, na
 def sex2deg(ra_hms, dec_dms, frame='icrs'):
     """
     Convert sexagesimal coords (hours:minutes:seconds, degrees:minutes:seconds) to degrees.
+
     :param ra_hms: Right ascentions. String or list of strings.
     :param dec_dms: Declinations. String or list of strings.
     :param frame: Equinox frame. ALMA default is ICRS.
@@ -496,6 +511,7 @@ def arcsec2kpc(z: float = 0):
     """
     Return the number of kiloparsecs contained in one arcsecond at given redshift.
     Use concordance cosmology.
+
     :param z: Redshift of the source
     :return:
     """
@@ -507,6 +523,7 @@ def line_stats_sextractor(catalogue, binning, SNR_min=5):
     '''
     A convenience function extracting high-SNR clumps from a FINDCLUMP(s) output catalogue, adding the binning and
     changing the frequency to GHz, plus reordering for output catalogues
+
     :param catalogue: findclump output
     :param binning: kernel half-width = (minwidth -1)/2
     :param SNR_min: mininum SNR above which to pick clumps
@@ -540,6 +557,7 @@ def run_line_stats_sex(sextractor_catalogue_name,
     '''
     Merges, cleans and reformat clump catalogues (positive or negative) of different kernel widths. Also makes a DS9
     region file for all clumps above a chosen threshold. Made to operate over all kernel half-widths for convenience.
+
     :param sextractor_catalogue_name: Generic catalogue name for the field, excluding kernel half-width
     :param binning_array: array of kernel half-width to process for the given field
     :param SNR_min: Threshold SN to select clump detections
@@ -583,13 +601,14 @@ def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1, verbose=False)
     Takes a catalogue of clumps and group sources likely from the same target. Tolerance in sky posoition and frequency
     to be given. If the data is not continuum-subtracted, continuum sources will result in multiple groups of clumps
     separated by delta_freq. Best used on continuum-subtracted data.
+
     :param cat_name:
     :param delta_offset_arcsec:
     :param delta_freq:
     :param verbose: show a progress bar, useful for time-consuming crops
     :return: Writes a copy of the input catalogue, with the added group number for each clump ("_groups.cat"),
-    a reduced catalogue with the highest SN detection for each group ("_cropped.cat"), a region files to plot the
-    positions of the latter.
+        a reduced catalogue with the highest SN detection for each group ("_cropped.cat"), a region files to plot the
+        positions of the latter.
     '''
 
     delta_offset_deg = delta_offset_arcsec / 3600.
@@ -671,14 +690,14 @@ def fidelity_selection(cat_negative, cat_positive, max_SN=20, i_SN=5, fidelity_t
     '''
     Fidelity selection following Walter et al. 2016 (https://ui.adsabs.harvard.edu/abs/2016ApJ...833...67W/abstract) to
     select clumps which are more likely to be positive than negative. Plot the selection and threshold if required.
+
     :param cat_negative: Catalogue of negative clump detections
     :param cat_positive: Catalogue of positive clump detections
-    :param i_SN: index of the SNR in the catalogues (if catalogues were produced by the internal interferopy findclumps
-    functiono i_SN =5)
+    :param i_SN: index of the SNR in the catalogues (if catalogues were produced by the internal interferopy findclumps function i_SN =5)
     :param max_SN: estimated maximum SN of clumps found in the cube
     :param plot_name: if different than "" plot the fidelity function and threshold and save to given name
     :fidelity_threshold: Fidelity threshold above which to select candidates
-    :return : Interpolated SN corresponding to the fidlity threshold chosen
+    :return: Interpolated SN corresponding to the fidlity threshold chosen
     '''
     bins_edges = np.linspace(0, max_SN, 2*max_SN+1)  # integer SN bins at half S/N
     bins = 0.5 * (bins_edges[:-1] + bins_edges[1:])

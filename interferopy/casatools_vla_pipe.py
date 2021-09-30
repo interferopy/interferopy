@@ -16,6 +16,7 @@ def flagtemplate_add(sdm="", flagcmds=[], outfile=""):
     """
     Append additional flagging commands to the flagtemplate if they are not present already.
     Useful for L-band VLA HI obs: e.g. flagcmds=["mode='manual' spw='1,2:0~64,4'"]
+
     :param sdm: path to visibility data, will append .flagtemplate.txt to it
     :param flagcmds: list of commands to append into the template file
     :param outfile: override naming to custom filename
@@ -40,6 +41,7 @@ def flagtemplate_add(sdm="", flagcmds=[], outfile=""):
 def partition_cont_range(line_freqs=[], line_widths=[], spw_start=1, spw_end=2):
     """
     Cuts one continuum range into smaller ones to avoid lines.
+
     :param line_freqs: line frequencies in GHz
     :param line_widths: widths of lines in GHz to cut from the continuum
     :param spw_start: start of the SPW in GHz
@@ -102,6 +104,7 @@ def build_cont_dat(vis="", line_freqs=[], line_widths=[], fields=[], outfile="co
     but writes them down as LSRK. Should not matter much, edges should be flagged anyway.
     Example of cont.dat content from NRAO online documentation:
     https://science.nrao.edu/facilities/vla/data-processing/pipeline/#section-25
+
     :param vis: path to the measurement set
     :param line_freqs: line frequencies (obs frame, LSRK) in GHz
     :param line_widths: widths of lines (obs frame, LSRK) in GHz to cut from the continuum
@@ -168,6 +171,7 @@ def build_cont_dat(vis="", line_freqs=[], line_widths=[], fields=[], outfile="co
 def lines_rest2obs(line_freqs_rest, line_widths_kms, vrad0):
     """
     Get observed frame frequencies and widths of the lines.
+
     :param line_freqs_rest: list of rest-frame line frequencies
     :param line_widths_kms: list of rest-frame linewidths in km/s
     :param vrad0: systemic velocity of the galaxy in km/s
