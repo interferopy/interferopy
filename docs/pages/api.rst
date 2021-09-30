@@ -1,12 +1,11 @@
-..
-   Reference API
-   =============
+Reference API
+=============
 
-   .. toctree::
-      :maxdepth: 6
-      :caption: Contents:
+.. toctree::
+   :maxdepth: 6
+   :caption: Contents:
 
-      ../modules
+   ../modules
 
 
 Index

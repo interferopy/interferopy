@@ -1,5 +1,5 @@
 Tools
-=====
+*****
 
 Interferopy comes with a toolbox of useful convenience functions that are either used in the Cube and MultiCube classes, or are meant to improve your analysis workflow.
 
@@ -14,7 +14,7 @@ First, let's import :py:mod:`interferopy.tools` as
 
 
 Interferometry
---------------
+==============
 
 The rms of 2D image can be computed using a custom rms routine (:any:`calcrms`) that excludes sources and artifacts via several rounds of sigma-clipping.
 
@@ -34,7 +34,7 @@ Finally, :any:`stack2d` helps with stacking radio images (in the image plane) at
 
     stack2d(ras, decs, im, imhead, imrms=None, pathout=None, overwrite=False, naxis=100, interpol=True)
 
-Additional specialized tasks and helper functions for data reduction in CASA are located in :any:`interferopy.asatools` and for VLA data :any:`interferopy.casatools_VLA_pipe`. If you want to use these;
+Additional specialized tasks and helper functions for data reduction in CASA are located in :any:`interferopy.casatools` and for VLA data :any:`interferopy.casatools_vla_pipe`. If you want to use these;
 
 .. code-block:: python
 
@@ -43,7 +43,7 @@ Additional specialized tasks and helper functions for data reduction in CASA are
 
 
 Data analysis
--------------
+=============
 A number of convenience functions are defined in to round/convert numbers:
 
 .. code-block:: python
@@ -67,7 +67,7 @@ To help with the analysis of the data, weighted averaged and typical emission pr
     y = iftools.gausscont(x, cont, amp, freq0, sigma)  # Gaussian on top of a constant continuum profile
 
 mm/radio Astronomy
-------------
+==================
 
 A number of function are implemented to compute surface brightness temperature, fit a modified blackbody to the dust SED and derive luminosities and star-formation rates
 
@@ -80,7 +80,7 @@ A number of function are implemented to compute surface brightness temperature, 
 
 
 Helper functions for FindClumps
---------------
+===============================
 
 :any:`line_stats_sextractor`, :any:`run_line_stats_sex`,  :any:`crop_doubles` functions are mostly run under the hood when using FindClumps on a :any:`Cube` and will be described in the appropriate section (:any:`findclumps`).
 
@@ -93,9 +93,8 @@ Once FindClumps has been run and candidate lines emitters have been found, the f
 
 
 Reference API
--------------
+=============
 
 .. automodapi:: interferopy.tools
    :no-main-docstr:
    :no-inheritance-diagram:
-======= end

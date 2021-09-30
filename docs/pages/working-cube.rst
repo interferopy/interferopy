@@ -1,5 +1,5 @@
 Usage
-=====
+*****
 
 Interferopy is based on two classes handling your reduced sub(-mm)/radio datacubes produced by imaging interferometric data.
 Two classes, *Cube* and *MultiCube*, are defined in [cube.py](src/cube.py).  Note that datacubes can be 2D (imageS), or 3D (e.g. with a spectral dimension).
@@ -13,14 +13,14 @@ A collection of helper functions are also available in [tools.py](src/tools.py).
 
 
 Cube
-----
+====
 
 Open a single data cube saved in fits format with
 
 .. code-block:: python
 
     cub = Cube("image.fits")
-   
+
 **A 2D map is also considered a 3D cube, only with a single velocity channel.**
 The Cube object gives quick access to useful properties and functions, for example
 
@@ -86,7 +86,7 @@ Again, convenience wrapper functions exist (derived from the *growing_aperture()
     r, profile = cub.profile_r()
 
 MultiCube
----------
+=========
 
 During the imaging process (e.g., using CASA task *tclean*), several cubes are produced, which all pertain to the same dataset and the same observed source.
 The *MultiCube* is a container, a dictionary-like class that can hold multiple cubes simultaneously. This class also defines functions that operate on multiple cubes, such as the primary beam correction or the residual scaled aperture integration (see Appendix A of https://ui.adsabs.harvard.edu/abs/2019ApJ...881...63N/abstract , and references therein).
@@ -126,11 +126,9 @@ the *MultiCube* object has *spectrum_corrected()* and *growing_aperture_correcte
 These methods perform both the residual scaling correction, and the primary beam correction (can be turned off with *apply_pb_corr=False*). The *tab* will contain a *Table* object with additional technical information, such as the aperture integrated values from individual cubes, the clean-to-dirty beam ratio, number of pixels or beams in the aperture, and so on.
 
 Reference API
--------------
+=============
 
-.. automodapi:: interferopy.cube                
+.. automodapi:: interferopy.cube
    :no-inheritance-diagram:
    :skip: tqdm
    :skip: Table
-
-
