@@ -113,6 +113,11 @@ class Cube:
         self.im = image
         self.naxis = naxis
 
+        if not np.isnan(self.im[(0,) * self.naxis]):
+            self.log("Warning: The first voxel of the cube is not np.nan. "
+                     "Note regions with no data are assumed to have value np.nan. "
+                     "If needed, use self.im_mask_values to mask appropriately.")
+
         # save the world coord system
         self.wcs = wcs.WCS(self.head, naxis=self.naxis)
 
@@ -199,6 +204,16 @@ class Cube:
             if type(self.beamvol) is Table.Column:
                 self.beamvol = self.beamvol.data
 
+    def write_fitsfile(self, filename, overwrite=False):
+        """
+        Write the current head and im to a new fitsfile (useful if modified).
+        This is still experimental and may fail on certain headers.
+        """
+        # transpose the cube back
+        hdu = fits.PrimaryHDU(data=self.im.T, header=self.head)
+        hdu.writeto(filename, overwrite=overwrite)
+
+
     def log(self, text: str):
         """
         Basic logger function to allow better functionality in the future development.
@@ -206,6 +221,30 @@ class Cube:
         Could be extended to provide different levels of info, timestamps, or logging to a file.
         """
         print(text)
+
+    def im_mask_values(self, value_to_mask=None, mask_value=np.nan):
+        """Mask specific `values_to_mask` in the image to `mask_value`.
+
+        For example, if regions with no data have values equal to zero
+        or another fill value they can be set to np.nan.  This is
+        required for `get_rms()` to work correctly.
+
+        :param value_to_mask: value to set to `mask_value`, if `None` the value of the first pixel is used `
+        :param mask_value: the value of pixels to be masked (default: np.nan)
+        """
+        if value_to_mask is None:
+            # if not given, it will assumes the first value is the value
+            # to be masked, but only if it is the same as the last value
+            out = self.im[(0,)*self.naxis]
+            out2 = self.im[(-1,)*self.naxis]
+            assert out == out2, "Cannot safely determine value_to_mask and it was not provided."
+        else:
+            out = value_to_mask
+
+        if out != mask_value:
+            self.im[self.im == out] = mask_value
+        else:
+            print ("Warning: You are masking to the same value.")
 
     def get_rms(self):
         """
