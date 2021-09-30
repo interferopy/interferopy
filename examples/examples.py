@@ -17,6 +17,7 @@ from astropy.table import Table
 import astropy.units as u
 from interferopy.cube import Cube, MultiCube
 import interferopy.tools as iftools
+from scipy.constants import c
 # The three libraries below are only needed for wcsaxes plots
 from matplotlib import colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -963,15 +964,15 @@ def dust_cont_fit():
         dust_mass, dust_temp, dust_beta = popt
         dust_mass_err, dust_temp_err, dust_beta_err = np.sqrt(np.diagonal(pcov))
 
-    print("dust_mass (10^8 Msol) = ", sigfig(dust_mass * u.kg.to(u.solMass) * 1e-8, 3),
-          " +- ", sigfig(dust_mass_err * u.kg.to(u.solMass) * 1e-8, 1))
-    print("dust_temp (K) = ", sigfig(dust_temp, 3), " +- ", sigfig(dust_temp_err, 1))
-    print("dust_beta = ", sigfig(dust_beta, 3), " +- ", sigfig(dust_beta_err, 1))
+    print("dust_mass (10^8 Msol) = ", iftools.sigfig(dust_mass * u.kg.to(u.solMass) * 1e-8, 3),
+          " +- ", iftools.sigfig(dust_mass_err * u.kg.to(u.solMass) * 1e-8, 1))
+    print("dust_temp (K) = ", iftools.sigfig(dust_temp, 3), " +- ", iftools.sigfig(dust_temp_err, 1))
+    print("dust_beta = ", iftools.sigfig(dust_beta, 3), " +- ", iftools.sigfig(dust_beta_err, 1))
 
     # integrate the dust SED, get LTIR, LFIR and SFR
 
     lum_fir, lum_tir, sfr_K98, sfr_k12 = iftools.dust_cont_integrate(dust_mass=dust_mass, dust_temp=dust_temp,
-                                                                     dust_beta=dust_beta, print=True)
+                                                                     dust_beta=dust_beta, print_to_console=True)
 
     return dust_mass, dust_temp, dust_beta, lum_fir, lum_tir, sfr_K98, sfr_k12
 
@@ -1038,25 +1039,25 @@ def dust_cont_plot(dust_mass, dust_temp, dust_beta):
     plt.show()
 
 def main():
-    spectrum_single_pixel()
-    spectrum_aperture()
-    spectrum_aperture_technical()
-    spectrum_aperture_paper()
+    # spectrum_single_pixel()
+    # spectrum_aperture()
+    # spectrum_aperture_technical()
+    # spectrum_aperture_paper()
+    #
+    # growing_aperture()
+    # growing_aperture_psf()
+    # growing_aperture_technical()
+    # growing_aperture_paper()
+    #
+    # map_single_paper()
+    # map_channels_paper()
+    # map_technical()
+    #
+    # map_wcsaxes()
+    # map_channels_wcsaxes()
 
-    growing_aperture()
-    growing_aperture_psf()
-    growing_aperture_technical()
-    growing_aperture_paper()
-
-    map_single_paper()
-    map_channels_paper()
-    map_technical()
-
-    map_wcsaxes()
-    map_channels_wcsaxes()
-
-    dust_mass, dust_temp, dust_beta, _, _,_,_ = dust_cont_plot()
-    dust_cont_fit(dust_mass=dust_mass, dust_temp=dust_temp, dust_beta=dust_beta)
+    dust_mass, dust_temp, dust_beta, _, _, _, _ =  dust_cont_fit()
+    dust_cont_plot(dust_mass=dust_mass, dust_temp=dust_temp, dust_beta=dust_beta)
 
 if __name__ == "__main__":
     main()
