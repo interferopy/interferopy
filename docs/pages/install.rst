@@ -13,3 +13,4 @@ Or, alternatively, install directly from the repository with
                 
     python -m pip install git+https://github.com/mladenovak/interferopy
 
+Interferopy runs in python3 and requires the following libraries: numpy, scipy, matplotlib, tqdm
