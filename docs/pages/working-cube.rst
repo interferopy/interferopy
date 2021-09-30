@@ -1,7 +1,10 @@
 Usage
 =====
 
-Two classes, *Cube* and *MultiCube*, are defined in [cube.py](src/cube.py) with the goal to speed up the analysis of 2D or 3D data cubes, which are produced by imaging the interferometric data. A collection of helper functions are also available in [tools.py](src/tools.py). Enable their functionality by importing them.
+Interferopy is based on two classes handling your reduced sub(-mm)/radio datacubes produced by imaging interferometric data.
+Two classes, *Cube* and *MultiCube*, are defined in [cube.py](src/cube.py).  Note that datacubes can be 2D (imageS), or 3D (e.g. with a spectral dimension).
+
+A collection of helper functions are also available in [tools.py](src/tools.py). Enable their functionality by importing them.
 
 .. code-block:: python
    
@@ -18,7 +21,7 @@ Open a single data cube saved in fits format with
    
     cub = Cube("image.fits")
    
-**A 2D map is also considered a 3D cube, only with a single channel.**
+**A 2D map is also considered a 3D cube, only with a single velocity channel.**
 The Cube object gives quick access to useful properties and functions, for example
 
 .. code-block:: python
@@ -53,9 +56,13 @@ Extract aperture flux density with the *spectrum()* method, for example
 
 .. code-block:: python
 
-    flux, err, _ = cub.spectrum(ra=ra, dec=dec, radius=1.5, calc_error=True)
-    
-Omitting the coordinates assumes the central pixel position, which is useful for a quick look at the data, especially in targeted observations, where the source is usually in the phase center. Setting the radius to zero yields a single pixel spectrum. Additional convenience wrapper functions exist (derived from the *spectrum()* method).
+    flux, err, _ = cub.spectrum(ra=ra, dec=dec, radius=1.5, calc_error=True) # r=1.5" aperture
+    flux, err, _ = cub.spectrum(ra=ra, dec=dec, radius=0, calc_error=True) # single pixel spectrum extraction
+    flux, err, _ = cub.spectrum(radius=1.5 calc_error=True) # center of the cube, r=1.5" aperture
+
+Omitting the coordinates assumes the central pixel position, which is useful for a quick look at the data, especially in targeted observations, where the source is usually in the phase center. Setting the radius to zero yields a single pixel spectrum.
+
+Additional convenience wrapper functions exist (derived from the *spectrum()* method).
 
 .. code-block:: python
 
@@ -82,7 +89,9 @@ MultiCube
 ---------
 
 During the imaging process (e.g., using CASA task *tclean*), several cubes are produced, which all pertain to the same dataset and the same observed source.
-The *MultiCube* is a container, a dictionary-like class that can hold multiple cubes simultaneously. This class also defines functions that operate on multiple cubes, such as the primary beam correction or the rasidual scaled aperture integration. Loading the *MultiCube* object is performed  with
+The *MultiCube* is a container, a dictionary-like class that can hold multiple cubes simultaneously. This class also defines functions that operate on multiple cubes, such as the primary beam correction or the residual scaled aperture integration (see Appendix A of https://ui.adsabs.harvard.edu/abs/2019ApJ...881...63N/abstract , and references therein).
+
+Loading the *MultiCube* object is performed  with
 
 .. code-block:: python
 
