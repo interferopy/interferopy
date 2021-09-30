@@ -15,7 +15,7 @@ Welcome to Interferopy's documentation!
    pages/tools
    pages/plots
    pages/findclumps
-
+   pages/api
 
 The documentation is still under development.  For now, checkout the
 readme on the github page: https://github.com/mladenovak/interferopy#readme
@@ -31,11 +31,3 @@ Enjoy one pisco coctail, surrounded by dust, bubbling with CO, and with a twist 
 Licence
 -------
 MIT License, Copyright (c) 2021 Leindert Boogaard, Romain Meyer, Mladen Novak
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

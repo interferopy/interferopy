@@ -7,7 +7,7 @@ Two classes, *Cube* and *MultiCube*, are defined in [cube.py](src/cube.py).  Not
 A collection of helper functions are also available in [tools.py](src/tools.py). Enable their functionality by importing them.
 
 .. code-block:: python
-   
+
     from interferopy.cube import Cube, MultiCube
     import interferopy.tools as iftools
 
@@ -18,7 +18,7 @@ Cube
 Open a single data cube saved in fits format with
 
 .. code-block:: python
-   
+
     cub = Cube("image.fits")
    
 **A 2D map is also considered a 3D cube, only with a single velocity channel.**
@@ -31,7 +31,7 @@ The Cube object gives quick access to useful properties and functions, for examp
     cub.rms  # compute and return noise rms in each channel (usual units are Jy/beam)
     cub.beam  # beam sizes (resolution in arcsec), e.g., cub.beam["bmaj"]
     cub.pixsize  # pixel size in arcsec
-    
+
 Access to the image data is provided via
 
 .. code-block:: python
@@ -41,7 +41,7 @@ Access to the image data is provided via
     cub.im[px, py, :]  # single pixel spectrum along the cube
     cub.im[:, :, ch]  # 2D map of a single channel
     cub.head  # original fits image header
-    
+
 Converting between pixel and celestial coordinates (usually equatorial coordinate system, in the ICRS or J2000 epoch) is performed with
 
 .. code-block:: python
@@ -69,7 +69,7 @@ Additional convenience wrapper functions exist (derived from the *spectrum()* me
     flux = cub.single_pixel_value()  # returns value(s) at the central pixel
     flux = cub.aperture_value(ra=ra, dec=dec, radius=0.5)  # integral within a circular aperture of r=0.5"
     flux, err = cub.aperture_value(ra=ra, dec=dec, radius=0.5, calc_error=True)
-    
+
 To find the best aperture size that encompasses the entire source, one can search for a saturation point in the curve of growth (cumulative flux density as a function of aperture radius). Obtain it with the *growing_aperture()* method.
 This operates on a single channel only (must set the *freq* or the *channel* parameter). The same function implements the ability to compute azimuthally averaged radial profile.
 
@@ -77,11 +77,11 @@ This operates on a single channel only (must set the *freq* or the *channel* par
 
     r, flux, err, _ = cub.growing_aperture(ra=ra, dec=dec, freq=freq, maxradius=5, calc_error=True)
     r, profile, err, _ = cub.growing_aperture(ra=ra, dec=dec, freq=freq, calc_error=True, profile=True)
-    
+
 Again, convenience wrapper functions exist (derived from the *growing_aperture()* method).
 
 .. code-block:: python
-   
+
     r, flux = cub.aperture_r()  # use the central pixel, the first channel, and the maxradius of 1" by default
     r, profile = cub.profile_r()
 
@@ -96,7 +96,7 @@ Loading the *MultiCube* object is performed  with
 .. code-block:: python
 
      mcub = MultiCube("image.fits")
-     
+
 If a specific naming convention is used, it will load automatically other available cubes in the same directory, such as the *image.dirty.fits*, *image.residual.fits*, *image.pb.fits*, and so on. This behavior can be overriden, and the cubes can be loaded manually
 
 .. code-block:: python
@@ -110,12 +110,12 @@ If a specific naming convention is used, it will load automatically other availa
 Specific cubes are accessed via their keys:
 
 .. code-block:: python
-    
+
     mcub.loaded_cubes  # list of loaded cubes
     cub = mcub["image"]  # return a Cube object
     cub = mcub.cubes["image"]  # same as above
 
-Analogous to *spectrum()* and *growing_aperture()* methods available for a *Cube* object, 
+Analogous to *spectrum()* and *growing_aperture()* methods available for a *Cube* object,
 the *MultiCube* object has *spectrum_corrected()* and *growing_aperture_corrected()*. These methods perform aperture integration that takes into account the ill-defined hybrid units of the cleaned maps. They require loaded *image*, *residual*, and *dirty* cubes (best to have the *pb* cube as well).
 
 .. code-block:: python
@@ -124,3 +124,13 @@ the *MultiCube* object has *spectrum_corrected()* and *growing_aperture_correcte
     r, flux, err, tab = mcub.growing_aperture_corrected(ra=ra, dec=dec, maxradius=5, calc_error=True)
 
 These methods perform both the residual scaling correction, and the primary beam correction (can be turned off with *apply_pb_corr=False*). The *tab* will contain a *Table* object with additional technical information, such as the aperture integrated values from individual cubes, the clean-to-dirty beam ratio, number of pixels or beams in the aperture, and so on.
+
+Reference API
+-------------
+
+.. automodapi:: interferopy.cube                
+   :no-inheritance-diagram:
+   :skip: tqdm
+   :skip: Table
+
+

@@ -90,3 +90,12 @@ Once FindClumps has been run and candidate lines emitters have been found, the f
 
     bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, hist_N_fitted = iftools.fidelity_selection(cat_negative, cat_positive, max_SN=20, i_SN=5, fidelity_threshold=0.6)
     bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, fig, [ax1, ax2] = iftools.fidelity_plot(cat_negative, cat_positive, max_SN=20, i_SN=5, fidelity_threshold=0.6, plot_name='', title_plot=None)
+
+
+Reference API
+-------------
+
+.. automodapi:: interferopy.tools
+   :no-main-docstr:
+   :no-inheritance-diagram:
+======= end

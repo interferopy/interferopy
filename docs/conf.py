@@ -35,8 +35,14 @@ release = get_distribution('interferopy').version
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.viewcode'
+    'sphinx.ext.autosummary',
+    'sphinx.ext.viewcode',
+    'sphinx_automodapi.automodapi',
+    #'sphinx_automodapi.smart_resolver'
 ]
+
+autosummary_generate = True
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
