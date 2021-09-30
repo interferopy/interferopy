@@ -10,10 +10,27 @@ Welcome to Interferopy's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   pages/install
+   pages/working-cube
+   pages/tools
+   pages/plots
+   pages/findclumps
+
 
 The documentation is still under development.  For now, checkout the
 readme on the github page: https://github.com/mladenovak/interferopy#readme
 
+
+Cheers!
+-------
+Enjoy one pisco coctail, surrounded by dust, bubbling with CO, and with a twist of CNO elements!
+
+.. image:: ../examples/thumbnails/pisco.png
+
+
+Licence
+-------
+MIT License, Copyright (c) 2021 Leindert Boogaard, Romain Meyer, Mladen Novak
 
 
 Indices and tables
