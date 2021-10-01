@@ -14,7 +14,10 @@ class Cube:
     Allows performing tasks such as aperture integration or spectrum extraction.
     It is instantiated by reading in a fits file.
 
-    Example:
+    :Example:
+
+    .. code-block:: python
+
         filename="cube.image.fits"
         ra, dec, freq = (205.533741, 9.477317341, 222.54) # coord for the emission line
         c=Cube(filename)
@@ -714,7 +717,7 @@ class Cube:
         of clumps of a minimum SN specified. Works by using a top-hat filter on a rebinned version of the datacube.
 
         :param output_file: relative/absolute path to the outpute catalogue
-        :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord].  
+        :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord].
             If ``None``, takes the central 25% pixels (square)
         :param sn_threshold: Minimum SN of peaks to retain
         :param minwidth: Number of channels to bin
@@ -815,7 +818,7 @@ class Cube:
         Crops doubles and trim candidates above a mininum SNR. See findclumps_1kernel().
 
         :param output_file: relative/absolute path to the outpute catalogue
-        :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord]. 
+        :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord].
             If ``None``, takes the central 25% pixels (square)
         :param sn_threshold: Minimum SN of peaks to retain
         :param minwidth: Number of channels to bin / a.k.a boxcar kernel size
@@ -883,11 +886,13 @@ class MultiCube:
     Allows performing tasks such as residual scaled aperture integration or spectrum extraction.
     Load another cube into MultiCube object by e.g. mc.load_cube("path_to_cube.residual.fits", "residual")
 
-    Example:
+    :Example:
+
+    .. code-block:: python
+
         filename="cube.fits"
         ra, dec, freq = (205.533741, 9.477317341, 222.54) # coord for the emission line
-        mc=MultiCube(filename) # will automatically try to load cube.xxx.fits, where xxx is
-                                # residual, dirty, pb, model, psf, or image.pbcor
+        mc=MultiCube(filename) # will automatically try to load cube.xxx.fits, where xxx is residual, dirty, pb, model, psf, or image.pbcor
 
         # Alternatively load each cube manually
         # mc = MultiCube()

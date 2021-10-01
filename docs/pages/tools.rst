@@ -96,5 +96,11 @@ Reference API
 =============
 
 .. automodapi:: interferopy.tools
-   :no-main-docstr:
+   :no-inheritance-diagram:
+
+
+.. automodapi:: interferopy.casatools
+   :no-inheritance-diagram:
+
+.. automodapi:: interferopy.casatools_vla_pipe
    :no-inheritance-diagram:
