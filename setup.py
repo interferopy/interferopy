@@ -27,7 +27,7 @@ setup(name='interferopy',
       project_urls={
           "Bug Tracker": "https://github.com/mladenovak/interferopy/issues"
       },
-      python_requires=">=3.6",
+      python_requires=">=3.7",
       install_requires=requirements,
       classifiers=[
           "Programming Language :: Python :: 3",
