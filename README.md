@@ -9,7 +9,7 @@ A Python library of common tasks used in the analysis of radio/(sub)mm interfero
 
 ## Documentation
 
-Read the documentation on [interferopy.readthedocs.io](https://interferopy.readthedocs.io/en/latest/) for instructions on how to install and use interferopy.
+Read the documentation on [interferopy.readthedocs.io](https://interferopy.readthedocs.io/en/latest/) for instructions on how to install and use Interferopy.
 
 
 ## Licence
