@@ -84,7 +84,7 @@ Helper functions for FindClumps
 
 :any:`line_stats_sextractor`, :any:`run_line_stats_sex`,  :any:`crop_doubles` functions are mostly run under the hood when using FindClumps on a :any:`Cube` and will be described in the appropriate section (:any:`findclumps`).
 
-Once FindClumps has been run and candidate lines emitters have been found, the fidelity function can be built and used to define a SNR threshold above which emitters are considered real (:any:`fidelity_selection`) and then plotted (:any`fidelity_plot`). By default, :any`fidelity_plot` calls :any:`fidelity_selection` and thus supersedes it.
+Once FindClumps has been run and candidate lines emitters have been found, the fidelity function can be built and used to define a SNR threshold above which emitters are considered real (:any:`tools.fidelity_selection`) and then plotted (:any:`tools.fidelity_plot`). By default, :any:`tools.fidelity_plot` calls :any:`tools.fidelity_selection` and thus supersedes it.
 
 .. code-block:: python
 
