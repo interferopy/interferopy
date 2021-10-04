@@ -1,5 +1,4 @@
-"""VLA pipeline helper functions"""
-__author__ = "Mladen Novak"
+# """VLA pipeline helper functions"""
 
 import numpy as np
 import os

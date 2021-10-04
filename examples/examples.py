@@ -45,7 +45,7 @@ def spectrum_single_pixel():
     ax.set_ylabel("Flux density (mJy / beam)")
     ax.legend(frameon=False)
 
-    plt.savefig("./plots/spectrum_single_pixel.pdf", bbox_inches="tight")  # save plot
+    #plt.savefig("./plots/spectrum_single_pixel.pdf", bbox_inches="tight")  # save plot
     plt.savefig("./thumbnails/spectrum_single_pixel.png", bbox_inches="tight", dpi=72)  # web raster version
 
     plt.show()
@@ -75,7 +75,7 @@ def spectrum_aperture():
     ax.set_ylabel("Aperture flux density (mJy)")
     ax.legend(frameon=False)
 
-    plt.savefig("./plots/spectrum_aperture.pdf", bbox_inches="tight")  # save plot
+    #plt.savefig("./plots/spectrum_aperture.pdf", bbox_inches="tight")  # save plot
     plt.savefig("./thumbnails/spectrum_aperture.png", bbox_inches="tight", dpi=72)  # web raster version
 
     plt.show()
@@ -154,7 +154,7 @@ def spectrum_aperture_paper():
     # add the zero line
     ax.axhline(0, color="gray", lw=0.5, ls=":")
 
-    plt.savefig("./plots/spectrum_aperture_paper.pdf", bbox_inches="tight")  # save plot
+    #plt.savefig("./plots/spectrum_aperture_paper.pdf", bbox_inches="tight")  # save plot
     plt.savefig("./thumbnails/spectrum_aperture_paper.png", bbox_inches="tight", dpi=72)  # web raster version
 
     plt.show()
@@ -212,7 +212,7 @@ def spectrum_aperture_technical():
     ax2.set_ylabel("Clean-to-dirty\nbeam ratio: " + r"$\epsilon$")
     ax2.set_ylim(-1.5, 1.5)
 
-    plt.savefig("./plots/spectrum_aperture_technical.pdf", bbox_inches="tight")  # save plot
+    #plt.savefig("./plots/spectrum_aperture_technical.pdf", bbox_inches="tight")  # save plot
     plt.savefig("./thumbnails/spectrum_aperture_technical.png", bbox_inches="tight", dpi=72)  # web raster version
 
     plt.show()
@@ -261,7 +261,7 @@ def growing_aperture():
     ax2.set_ylabel("Cumulative flux density (mJy)", color=col)
     ax2.tick_params(axis='y', colors=col)
 
-    plt.savefig("./plots/growing_aperture.pdf", bbox_inches="tight")  # save plot
+    #plt.savefig("./plots/growing_aperture.pdf", bbox_inches="tight")  # save plot
     plt.savefig("./thumbnails/growing_aperture.png", bbox_inches="tight", dpi=72)  # web raster version
 
     plt.show()
@@ -303,7 +303,7 @@ def growing_aperture_psf():
     ax2.set_ylabel("Cumulative", color=col)
     ax2.tick_params(axis='y', colors=col)
 
-    plt.savefig("./plots/growing_aperture_psf.pdf", bbox_inches="tight")  # save plot
+    #plt.savefig("./plots/growing_aperture_psf.pdf", bbox_inches="tight")  # save plot
     plt.savefig("./thumbnails/growing_aperture_psf.png", bbox_inches="tight", dpi=72)  # web raster version
 
     plt.show()
@@ -344,7 +344,7 @@ def growing_aperture_technical():
 
     ax.legend(bbox_to_anchor=(1, 0.8))
 
-    plt.savefig("./plots/growing_aperture_technical.pdf", bbox_inches="tight")  # save plot
+    #plt.savefig("./plots/growing_aperture_technical.pdf", bbox_inches="tight")  # save plot
     plt.savefig("./thumbnails/growing_aperture_technical.png", bbox_inches="tight", dpi=72)  # web raster version
 
     plt.show()
@@ -391,7 +391,7 @@ def growing_aperture_paper():
     ax2.set_xlabel("Radius (kpc)")
     ax2.tick_params(direction='in', which="both")
 
-    plt.savefig("./plots/growing_aperture_paper.pdf", bbox_inches="tight")  # save plot
+    #plt.savefig("./plots/growing_aperture_paper.pdf", bbox_inches="tight")  # save plot
     plt.savefig("./thumbnails/growing_aperture_paper.png", bbox_inches="tight", dpi=72)  # web raster version
 
     plt.show()
@@ -473,7 +473,7 @@ def map_single_paper():
     ax.set_xlabel(r"$\Delta$ RA (arcsec)")
     ax.set_ylabel(r"$\Delta$ Dec (arcsec)")
 
-    plt.savefig("./plots/map_single_paper.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
+    #plt.savefig("./plots/map_single_paper.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
     plt.savefig("./thumbnails/map_single_paper.png", bbox_inches="tight", dpi=72)  # web raster version
 
     plt.show()
@@ -571,7 +571,7 @@ def map_channels_paper():
     cb = ax.cax.colorbar(axim)
     cb.set_label_text(r"$S_\nu$ (mJy beam$^{-1}$)")
 
-    plt.savefig("./plots/map_channels_paper.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
+    #plt.savefig("./plots/map_channels_paper.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
     plt.savefig("./thumbnails/map_channels_paper.png", bbox_inches="tight", dpi=72)  # web raster version
 
     plt.show()
@@ -676,7 +676,7 @@ def map_technical():
     # ax.imshow(subim.T, origin='lower', cmap="RdBu_r", vmin=0.95, vmax=1, extent=extent)
     # ax.set_title("PB")
 
-    plt.savefig("./plots/map_technical.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
+    #plt.savefig("./plots/map_technical.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
     plt.savefig("./thumbnails/map_technical.png", bbox_inches="tight", dpi=72)  # web raster version
 
     plt.show()
@@ -765,7 +765,7 @@ def map_wcsaxes():
     ax.set_xlabel(r"RA ")
     ax.set_ylabel(r"Dec")
 
-    plt.savefig("./plots/map_wcsaxes.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
+    #plt.savefig("./plots/map_wcsaxes.pdf", bbox_inches="tight", dpi=600)  # need higher dpi for crisp data pixels
     plt.savefig("./thumbnails/map_wcsaxes.png", bbox_inches="tight", dpi=72)  # web raster version
 
     plt.show()
@@ -894,7 +894,7 @@ def map_channels_wcsaxes():
 
     fig.subplots_adjust(hspace=0.1, wspace=0.1)
 
-    plt.savefig("./plots/map_channels_wcsaxes.pdf", bbox_inches="tight", dpi=600)
+    #plt.savefig("./plots/map_channels_wcsaxes.pdf", bbox_inches="tight", dpi=600)
     plt.savefig("./thumbnails/map_channels_wcsaxes.png", bbox_inches="tight", dpi=72)
     plt.show()
 
@@ -1034,27 +1034,27 @@ def dust_cont_plot(dust_mass, dust_temp, dust_beta):
     ax2.set_xlabel(r"$\lambda_{obs}$ (mm)")
     ax2.tick_params(direction='in')
 
-    plt.savefig("./plots/dust_continuum_fluxes.pdf", bbox_inches="tight", dpi=600)
+    #plt.savefig("./plots/dust_continuum_fluxes.pdf", bbox_inches="tight", dpi=600)
     plt.savefig("./thumbnails/dust_continuum_fluxes.png", bbox_inches="tight", dpi=72)
     plt.show()
 
 def main():
-    # spectrum_single_pixel()
-    # spectrum_aperture()
-    # spectrum_aperture_technical()
-    # spectrum_aperture_paper()
-    #
-    # growing_aperture()
-    # growing_aperture_psf()
-    # growing_aperture_technical()
-    # growing_aperture_paper()
-    #
-    # map_single_paper()
-    # map_channels_paper()
-    # map_technical()
-    #
-    # map_wcsaxes()
-    # map_channels_wcsaxes()
+    spectrum_single_pixel()
+    spectrum_aperture()
+    spectrum_aperture_technical()
+    spectrum_aperture_paper()
+
+    growing_aperture()
+    growing_aperture_psf()
+    growing_aperture_technical()
+    growing_aperture_paper()
+
+    map_single_paper()
+    map_channels_paper()
+    map_technical()
+
+    map_wcsaxes()
+    map_channels_wcsaxes()
 
     dust_mass, dust_temp, dust_beta, _, _, _, _ =  dust_cont_fit()
     dust_cont_plot(dust_mass=dust_mass, dust_temp=dust_temp, dust_beta=dust_beta)
