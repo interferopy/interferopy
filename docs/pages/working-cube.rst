@@ -2,15 +2,11 @@ Usage
 *****
 
 Interferopy is based on two classes handling your reduced sub(-mm)/radio datacubes produced by imaging interferometric data.
-Two classes, *Cube* and *MultiCube*, are defined in [cube.py](src/cube.py).  Note that datacubes can be 2D (imageS), or 3D (e.g. with a spectral dimension).
-
-A collection of helper functions are also available in [tools.py](src/tools.py). Enable their functionality by importing them.
+Two classes, *Cube* and *MultiCube*, are defined in :any:`Cube` and :any:`MultiCube`.  Note that datacubes can be 2D (images), or 3D (e.g. with a spectral dimension).
 
 .. code-block:: python
 
     from interferopy.cube import Cube, MultiCube
-    import interferopy.tools as iftools
-
 
 Cube
 ====
@@ -89,7 +85,7 @@ MultiCube
 =========
 
 During the imaging process (e.g., using CASA task *tclean*), several cubes are produced, which all pertain to the same dataset and the same observed source.
-The :any:`MultiCube` is a container, a dictionary-like class that can hold multiple cubes simultaneously. This class also defines functions that operate on multiple cubes, such as the primary beam correction or the residual scaled aperture integration (see Appendix A of https://ui.adsabs.harvard.edu/abs/2019ApJ...881...63N/abstract , and references therein).
+The :any:`MultiCube` is a container, a dictionary-like class that can hold multiple cubes simultaneously. This class also defines functions that operate on multiple cubes, such as the primary beam correction or the residual scaled aperture integration (see Appendix A of `Novak et al. (2019) <https://ui.adsabs.harvard.edu/abs/2019ApJ...881...63N/abstract>`_ , and references therein).
 
 Loading the :any:`MultiCube` object is performed  with
 

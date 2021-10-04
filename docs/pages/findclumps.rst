@@ -1,7 +1,7 @@
 Finding line emitters with Findclumps
 =====================================
 
-Interferopy includes an implementation of the Findclumps algorithm used by Walter+2016 to find line emitters in ASPECS (https://ui.adsabs.harvard.edu/abs/2016ApJ...833...67W/abstract).
+Interferopy includes an implementation of the Findclumps algorithm used by `Walter+2016 <https://ui.adsabs.harvard.edu/abs/2016ApJ...833...67W/abstract>`_ to find line emitters in ASPECS.
 At its core, Findclumps simply convolves the cube with boxcar kernels of various sizes, and run sextractor on the created image to find "clumps". It does so on the original and inverted cubes, enabling the user to estimate which detections are real or not. It groups "clumps" by frequency and spatial distance, at the discretion of the user.
 
 To run FindClcumps, you will need to have sextractor installed (which can be done via an astroconda environment : https://astroconda.readthedocs.io/en/latest/package_manifest.html), and have a local "default.sex" file in the folder where you run the interferopy-findclumps script. You can either copy your generic default.sex that comes as  part of sextractor of modify it to optimise the search for "clumps" in the cube.
