@@ -436,7 +436,7 @@ class Cube:
         try:
             # multiple channels?
             for c in ch:
-                if c < 0 or c >= self.nch:
+                if abs(c) >= self.nch:  # allow negative channel indexing
                     raise ValueError("Requested channel is outside of the available range.")
                     return None
 
@@ -446,7 +446,7 @@ class Cube:
             # single channel or frequency
             if freq is not None:
                 ch = self.freq2pix(freq)
-            elif ch < 0 or ch >= self.nch:
+            elif abs(ch) >= self.nch:  # allow negative channel indexing
                 raise ValueError("Requested channel is outside of the available range.")
                 return None
 
