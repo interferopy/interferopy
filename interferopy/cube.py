@@ -404,16 +404,51 @@ class Cube:
 
         return self.freqs[pz]
 
-    def im2d(self, ch: int = 0):
-        """
-        Get the 2D map. Convenience function to avoid indexing notation.
+    def im2d(self, ch: int = None, freq: float = None, function=np.sum):
+        """Get a 2D map. Convenience function to avoid indexing notation.
 
-        :param ch: Channel index.
+        Provided with a single `ch`` (or `freq`, but not both) it will
+        return that channel. Alternatively, `ch` or `freq` can also be
+        a list with the `[start, stop]` of a slice, to which
+        `function` is then applied to make a collapsed image (default:
+        `np.sum`).
+
+        :param ch: channel index, or list of [star, stop] to which `function` is applied (provide either index or frequency)
+        :param freq: channel freq, or list of `[start, stop]` to which `function is applied` (provide either index or frequency)
+        :param function: function to apply to `ch` or `freq` slice. Only used if `ch` or `freq` is a `list`. default: `np.sum`
         :return: 2D numpy array.
+
         """
-        if ch < 0 or ch >= self.nch:
-            raise ValueError("Requested channel is outside of the available range.")
+        if ch is not None and freq is not None:
+            raise ValueError("Provide either channel or frequency (not both).")
             return None
+
+        try:
+            # multiple frequencies? convert to channels
+            ch_tmp = []
+            for i, f in enumerate(freq):
+                ch_tmp.append(self.freq2pix(f))
+            ch = ch_tmp
+        except TypeError:
+            # still try multiple channels
+            pass
+
+        try:
+            # multiple channels?
+            for c in ch:
+                if c < 0 or c >= self.nch:
+                    raise ValueError("Requested channel is outside of the available range.")
+                    return None
+
+            return function(self.im[:, :, ch[0]:ch[1]], axis=-1)
+
+        except TypeError:
+            # single channel or frequency
+            if freq is not None:
+                ch = self.freq2pix(freq)
+            elif ch < 0 or ch >= self.nch:
+                raise ValueError("Requested channel is outside of the available range.")
+                return None
 
         return self.im[:, :, ch]
 
