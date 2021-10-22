@@ -13,17 +13,8 @@ from astropy import wcs
 from astropy.coordinates import SkyCoord
 from scipy.special import erf, erfinv
 from matplotlib import pyplot as plt
-import matplotlib as mpl
 from scipy import integrate
 from scipy.constants import c
-
-mpl.rcParams['xtick.direction'] = 'in'
-mpl.rcParams['ytick.direction'] = 'in'
-mpl.rcParams['axes.linewidth'] = 1.5
-mpl.rcParams['xtick.major.size'] = 6
-mpl.rcParams['xtick.minor.size'] = 3.5
-mpl.rcParams['ytick.major.size'] = 6
-mpl.rcParams['ytick.minor.size'] = 3.5
 
 
 def sigfig(x, digits=2):
