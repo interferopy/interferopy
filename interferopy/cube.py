@@ -407,15 +407,18 @@ class Cube:
     def im2d(self, ch: int = None, freq: float = None, function=np.sum):
         """Get a 2D map. Convenience function to avoid indexing notation.
 
-        Provided with a single `ch`` (or `freq`, but not both) it will
+        Provided with a single `ch` (or `freq`, but not both) it will
         return that channel. Alternatively, `ch` or `freq` can also be
         a list with the `[start, stop]` of a slice, to which
         `function` is then applied to make a collapsed image (default:
         `np.sum`).
 
-        :param ch: channel index, or list of [star, stop] to which `function` is applied (provide either index or frequency)
-        :param freq: channel freq, or list of `[start, stop]` to which `function is applied` (provide either index or frequency)
-        :param function: function to apply to `ch` or `freq` slice. Only used if `ch` or `freq` is a `list`. default: `np.sum`
+        :param ch: channel index, alternatively: a list with a slice
+            `[start, stop]`` to which `function` is applied
+        :param freq: channel freq, alternatively: a list with a slice
+            `[start, stop]`` to which `function` is applied
+        :param function: function to apply when `ch` or `freq` is a slice (default: `np.sum`),
+            should be a (numpy) function that takes the argument `axis=-1` and aggregates over it
         :return: 2D numpy array.
 
         """
