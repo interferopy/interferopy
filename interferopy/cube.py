@@ -247,6 +247,16 @@ class Cube:
         else:
             print ("Warning: You are masking to the same value.")
 
+    def im_mask_channels(self, channels_to_mask, mask_value=np.nan):
+        """Mask specific `channels_to_mask` to `mask_value`.
+
+        :param channels_to_mask: list of channels to be masked (python indexing)
+        :param mask_value: the value of pixels to be masked (default: np.nan)
+        """
+
+        for chan in channels_to_mask:
+            self.im[:,:,chan] = mask_value
+
     def get_rms(self):
         """
         Calculate rms for each channel of the cube. Can take some time to compute on large cubes.
