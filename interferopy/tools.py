@@ -620,7 +620,8 @@ def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1, verbose=False)
     catalogue_data = np.loadtxt(cat_name)
 
     # sort by SNR decreasing
-    catalogue_data = catalogue_data[catalogue_data[:, 1].argsort()[::-1]]
+    catalogue_data = catalogue_data[catalogue_data[:, 5].argsort()[::-1]]
+
     cosd_array = np.cos(catalogue_data[:, 1] * np.pi / 180.)
 
     group = -np.ones(len(catalogue_data))
