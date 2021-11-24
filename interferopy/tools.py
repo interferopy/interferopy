@@ -656,12 +656,12 @@ def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1, verbose=False)
                fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f', '%2.0i'],
                header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING GROUP")
 
-    catalogue_cropped_best = np.zeros((ncnt - 2, len(catalogue_final[0])))
+    catalogue_cropped_best = np.zeros((ncnt, len(catalogue_final[0])))
     if verbose:
         print("Filtering highest S/N sources:")
-        iterable = tqdm(range(ncnt -2))
+        iterable = tqdm(range(ncnt))
     else:
-        iterable = range(ncnt - 2)
+        iterable = range(ncnt)
     for i in iterable:
         ind = np.where([catalogue_final[:, -1] == i])[1]
         if len(ind) > 1:
