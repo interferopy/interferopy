@@ -600,7 +600,7 @@ def run_line_stats_sex(sextractor_catalogue_name,
                                header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING")
 
 
-def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1, verbose=False, second_pass=False):
+def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1, verbose=False):
     '''
     Takes a catalogue of clumps and group sources likely from the same target. Tolerance in sky posoition and frequency
     to be given. If the data is not continuum-subtracted, continuum sources will result in multiple groups of clumps
@@ -654,8 +654,8 @@ def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1, verbose=False,
     catalogue_final = catalogue_final[catalogue_final[:, -1].argsort()]
 
     np.savetxt(cat_name[:-4] + '_groups.cat', catalogue_final,
-               fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f', '%2.0i'] + (['%2.0i'] if second_pass else []),
-               header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING GROUP" + (" GROUP2" if second_pass else ""))
+               fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f', '%2.0i'],
+               header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING GROUP")
 
     catalogue_cropped_best = np.zeros((ncnt, len(catalogue_final[0])))
     if verbose:
@@ -673,8 +673,8 @@ def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1, verbose=False,
             catalogue_cropped_best[i, :] = catalogue_final[ind, :]
 
     np.savetxt(cat_name[:-4] + '_cropped.cat', catalogue_cropped_best,
-               fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f', '%2.0i'] + (['%2.0i'] if second_pass else []),
-               header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING GROUP" + (" GROUP2" if second_pass else ''))
+               fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f', '%9.6f', '%2.0f', '%2.0i'],
+               header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING GROUP")
 
     catalogue_cropped_best_region = open(cat_name[:-4] + '_cropped.reg', 'w+')
     catalogue_cropped_best_region.write('# Region file format: DS9 version 4.1 \n '
