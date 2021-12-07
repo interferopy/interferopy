@@ -8,6 +8,7 @@ from scipy.interpolate import interp2d
 import astropy.units as u
 from astropy.cosmology import FlatLambdaCDM
 from astropy.io import fits
+from astropy.table import Table
 from astropy import wcs
 from astropy.coordinates import SkyCoord
 from scipy.special import erf, erfinv
@@ -691,7 +692,8 @@ def fidelity_function(sn, sigma, c):
     return 0.5 * erf((sn - c) / sigma) + 0.5
 
 
-def fidelity_selection(cat_negative, cat_positive, max_SN=20, i_SN=5, fidelity_threshold=0.6):
+def fidelity_selection(cat_negative, cat_positive, bin_edges=np.arange(0, 20, 0.1),
+                       i_SN=5, fidelity_threshold=0.6, min_SN_fit=None, verbose=True):
     '''
     Fidelity selection following Walter et al. 2016 (https://ui.adsabs.harvard.edu/abs/2016ApJ...833...67W/abstract) to
     select clumps which are more likely to be positive than negative. Plot the selection and threshold if required.
@@ -704,50 +706,66 @@ def fidelity_selection(cat_negative, cat_positive, max_SN=20, i_SN=5, fidelity_t
     :fidelity_threshold: Fidelity threshold above which to select candidates
     :return: Interpolated SN corresponding to the fidlity threshold chosen
     '''
-    bins_edges = np.linspace(0, max_SN, 2*max_SN+1)  # integer SN bins at half S/N
-    bins = 0.5 * (bins_edges[:-1] + bins_edges[1:])
-    hist_N, _ = np.histogram(cat_negative[:, int(i_SN)], bins=bins_edges)
-    hist_P, _ = np.histogram(cat_positive[:, int(i_SN)], bins=bins_edges)
+    if verbose:
+        if np.max(np.concatenate([cat_positive[:, int(i_SN)], cat_negative[:, int(i_SN)]])) > bin_edges[-1]:
+            print("Warning, there are candidates above the max S/N.")
 
-    ### if low-SN clumps do not exist (due to Sextractor, cleaning, etc..), trim for cumulative hist to work properly:
+    # bins are the bin midpoints
+    bins = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+    hist_N, _ = np.histogram(cat_negative[:, int(i_SN)], bins=bin_edges)
+    hist_P, _ = np.histogram(cat_positive[:, int(i_SN)], bins=bin_edges)
+
+    ### trim until the first bin that has measurements
     ind_first_N_clump = int(np.where(hist_N > 0)[0][0])
-
     hist_N = hist_N[ind_first_N_clump:]
     hist_P = hist_P[ind_first_N_clump:]
     bins = bins[ind_first_N_clump:]
 
+    ### trim further to the min_SN_fit, to avoid the flattening of counts at low S/N
+    ## the exact bins to be fitted could be further improved (see JGL+19)
+    bin_minSN_i = np.where(bins > min_SN_fit)[0][0]
     hist_N_erf = lambda sn, c, sigma: c * (np.exp(- sn ** 2 / sigma ** 2))
-    popt, _ = curve_fit(hist_N_erf, xdata=bins[np.where(bins > 3)[0][0]:], ydata=hist_N[np.where(bins > 3)[0][0]:],
-                        sigma=np.sqrt(hist_N[np.where(bins > 3)[0][0]:] + 1), method='lm', maxfev=1000, p0=[1000, 1])
+    popt, _ = curve_fit(hist_N_erf,
+                        xdata=bins[bin_minSN_i:],
+                        ydata=hist_N[bin_minSN_i:],
+                        sigma=np.sqrt(hist_N[bin_minSN_i:] + 1),
+                        method='lm', maxfev=1000, p0=[1000, 1])
 
-    hist_N_fitted = hist_N_erf(bins, popt[0], popt[1])
+    hist_N_fitted = hist_N_erf(bins[bin_minSN_i:], popt[0], popt[1])
     # this is a mathematical trick (hist_P+1), but necessary for proper fit
-    fidelity = 1 - np.clip(np.nan_to_num(hist_N_fitted / (hist_P + 1), nan=0), 0, 1)
+    fidelity = 1 - np.clip(np.nan_to_num(hist_N_fitted / (hist_P[bin_minSN_i:] + 1), nan=0), 0, 1)
     # err_fidelity = np.clip(np.nan_to_num(np.sqrt(hist_N+1)/ (hist_P), nan=0), 0, 1)
-    popt, pcorr = curve_fit(fidelity_function, xdata=bins, ydata=fidelity, method='lm', maxfev=1000, p0=[2, 5])
+    popt, pcorr = curve_fit(fidelity_function, xdata=bins[bin_minSN_i:], ydata=fidelity, method='lm', maxfev=1000, p0=[2, 5])
 
     sn_thres = erfinv((fidelity_threshold - 0.5) / 0.5) * popt[0] + popt[1]
 
-    return bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, hist_N_fitted
+    return bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, bins[bin_minSN_i:], hist_N_fitted
 
 
-def fidelity_plot(cat_negative, cat_positive, max_SN=20, i_SN=5, fidelity_threshold=0.6, plot_name='', title_plot=None):
+def fidelity_plot(cat_negative, cat_positive, bin_edges=np.arange(0, 20, 0.1),
+                  i_SN=5, fidelity_threshold=0.6, plot_name='', title_plot=None,
+                  min_SN_fit=None, verbose=True):
 
-    bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, hist_N_fitted = fidelity_selection(cat_negative, cat_positive, max_SN, i_SN, fidelity_threshold)
+    bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, bins_fitted, hist_N_fitted \
+        = fidelity_selection(cat_negative, cat_positive,
+                             bin_edges,
+                             i_SN, fidelity_threshold, min_SN_fit,
+                             verbose=verbose)
 
-    fig = plt.figure(figsize=(5, 4))
+    fig = plt.figure(figsize=(5, 5))
     ax1 = fig.add_subplot(211)
     # plot fidelity
-    ax1.plot(bins, fidelity, drawstyle='steps-mid')
-    ax1.fill_between(bins, fidelity, step="mid", alpha=0.4)
+    ax1.plot(bins_fitted, fidelity, drawstyle='steps-mid', c='C7')
+    ax1.fill_between(bins_fitted, fidelity, step="mid", alpha=0.4, color='C7')
     # plot interpolated fidelity
     xr = np.linspace(bins[0], bins[-1], 200)
     ax1.plot(xr, fidelity_function(xr, popt[0], popt[1]), color='firebrick')
     # plot S/N thresh
+    ax1.set_xlim(bins[0], bins[-1])
     ax1.set_ylim(-0.05, 1.05)
     ymin, ymax = ax1.get_ylim()
     plt.vlines(x=sn_thres, ymin=ymin, ymax=ymax, linestyles='--',
-               label=f'F(S/N={sn_thres:.2f})=0.5', color='k')
+               label=f'F(S/N={sn_thres:.2f})={fidelity_threshold}', color='k')
     plt.xticks([])
     plt.ylabel('Fidelity')
     plt.legend()
@@ -758,13 +776,13 @@ def fidelity_plot(cat_negative, cat_positive, max_SN=20, i_SN=5, fidelity_thresh
     # plot positive & negative hist
     ax2.plot(bins, hist_P, drawstyle='steps-mid')
     ax2.plot(bins, hist_N, drawstyle='steps-mid')
-    ax2.plot(bins, hist_N_fitted)
+    ax2.plot(bins_fitted, hist_N_fitted, label='Negative Fit')
     ax2.set_yscale('log')
     ax2.fill_between(bins, hist_P, step="mid", alpha=0.4, label='Positive clumps')
     ax2.fill_between(bins, hist_N, step="mid", alpha=0.4, label='Negative clumps')
     ax2.legend(fontsize=10)
     # always show 1
-    plt.ylim(0.7, None)
+    ax2.set_ylim(0.1, None)
     ymin, ymax = ax2.get_ylim()
     plt.vlines(x=sn_thres, ymin=ymin, ymax=ymax, linestyles='--', color='k')
     plt.ylabel(r'$\log N$')
@@ -777,3 +795,70 @@ def fidelity_plot(cat_negative, cat_positive, max_SN=20, i_SN=5, fidelity_thresh
         plt.savefig(plot_name + '.pdf', bbox_inches="tight", dpi=300)
 
     return bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, fig, [ax1, ax2]
+
+
+def fidelity_analysis(catN_name, catP_name,
+                      bins=np.arange(0, 15, 0.2),
+                      min_SN_fit=4.0,
+                      fidelity_threshold=0.5,
+                      kernels=np.arange(3, 20, 2),
+                      verbose=True):
+    if verbose:
+        print("Analysing fidelity.")
+    # read in the input catalogs - these should already be cropped
+    catN = Table.read(catN_name, format='ascii')
+    catP = Table.read(catP_name, format='ascii')
+
+    # first analyse fidelity for all kernels
+    bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, _, _\
+        = fidelity_plot(np.array([catN['SNR']]).T,
+                        np.array([catP['SNR']]).T,
+                        i_SN=0,
+                        bin_edges=bins,
+                        min_SN_fit=min_SN_fit,
+                        fidelity_threshold=fidelity_threshold,
+                        plot_name='hist_fid_all',
+                        title_plot='all kernels', verbose=verbose)
+
+    catP['F'] = fidelity_function(catP['SNR'], popt[0], popt[1])
+    catN['F'] = -1 * np.ones_like(catN['SNR'])
+
+    # analyse fidelity per kernel width
+    # placeholder for the fidelity per kw
+    catP['F_kw'] = -1 * np.ones_like(catP['SNR'])
+    catN['F_kw'] = -1 * np.ones_like(catN['SNR'])
+
+    for kernel in kernels:
+        catP_kernel = catP[catP['BINNING'] == kernel]
+        catN_kernel = catN[catN['BINNING'] == kernel]
+
+        bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, _, _ \
+            = fidelity_plot(np.array([catN_kernel['SNR']]).T,
+                            np.array([catP_kernel['SNR']]).T,
+                            i_SN=0,
+                            bin_edges=bins,
+                            min_SN_fit=min_SN_fit,
+                            fidelity_threshold=fidelity_threshold,
+                            plot_name=f'hist_fid_kw{kernel}',
+                            title_plot=f'kernel = {kernel} ch', verbose=verbose)
+
+        catP['F_kw'][catP['BINNING'] == kernel] = fidelity_function(catP['SNR'][catP['BINNING'] == kernel], popt[0], popt[1])
+
+    # save output catalog sorted by Fidelity
+    catP.sort("F_kw", reverse=True)
+    catN.sort("F_kw", reverse=True)
+
+    catP.add_column(np.arange(1, len(catP)+1), index=-1, name='ID')
+    catN.add_column(np.arange(1, len(catN)+1), index=-1, name='ID')
+
+    np.savetxt(catP_name.rstrip('.cat')+'_wfidelity_sorted.cat',
+               catP,
+               fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f',
+                    '%9.6f', '%2.0f', '%2.0i', '%5.3f', '%5.3f', '%2.0i'],
+               header='RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING GROUP F F_kw ID')
+
+    # return candidates above fidelity threshold
+    candP = catP[np.where(catP['F_kw'] > fidelity_threshold)[0]]
+    candN = catN[np.where(catN['F_kw'] > fidelity_threshold)[0]]
+
+    return catP, catN, candP, candN

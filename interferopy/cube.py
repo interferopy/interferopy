@@ -803,12 +803,6 @@ class Cube:
             # read output
             sextractor_cat = np.genfromtxt(tmp_list, skip_header=6)
 
-            # cleanup before processing
-            if clean_tmp:
-                os.remove(tmp_fits)
-                os.remove(tmp_list)
-                os.rmdir(tmpdir)
-
             # process output
             if sextractor_cat.shape == (0,):
                 continue
@@ -834,14 +828,36 @@ class Cube:
                 with open(output_file + '_kw' + str(int(minwidth)) + '.cat', "ab") as f:
                     np.savetxt(fname=f, X=sextractor_cat)
 
-    def findclumps_full(self, output_file, kernels=np.arange(3, 20, 2), rms_region=1. / 4.,
-                        sextractor_param_file='default.sex', clean_tmp=True, min_SNR=0,
-                        delta_offset_arcsec=2, delta_freq=0.1, ncores=1,
-                        run_positive=True, run_negative=True,
+            # cleanup intermediate files from this loop
+            if clean_tmp:
+                os.remove(tmp_fits)
+                os.remove(tmp_list)
+
+        # finally remove tmpdir
+        if clean_tmp:
+            os.rmdir(tmpdir)
+
+    def findclumps_full(self, output_file,
+                        kernels=np.arange(3, 20, 2), rms_region=1./4.,
+                        sextractor_param_file='default.sex',
+                        clean_tmp=True, ncores=1,
+                        run_search=True, run_positive=True, run_negative=True,
+                        run_crop=True,
+                        min_SNR=0, delta_offset_arcsec=2, delta_freq=0.1,
+                        run_fidelity=True, bins=np.arange(0, 15, 0.2),
+                        min_SN_fit=4.0, fidelity_threshold=0.5,
                         verbose=False):
-        '''
-        Run the findclump search for different kernels sizes, on the positive and/or negative cube(s).
-        Crops doubles and trim candidates above a mininum SNR. See findclumps_1kernel().
+        '''Run the full findclumps search and analysis for different kernel
+        sizes, on the positive and/or negative cube(s):
+
+        1. Search (see `findclumps_1kernel()`)
+        2. Crop doubles and trim candidates above `min_SNR` (see `tools.run_line_stats_sex` and `tools_crop_doubles`)
+        3. Determine the fidelity and produce catalog of candidates (see `tools.fidelity_analysis`)
+
+        To skip any of the steps, use the appropriate flags.  This is
+        intended to be used to re-run parts of the search and/or
+        analysis after changing the parameters (e.g., adding different
+        kernels and/or modifying the cropping criteria).
 
         :param output_file: relative/absolute path to the outpute catalogue
         :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord].
@@ -854,57 +870,75 @@ class Cube:
         :run_positive: run findclumps on the positive cube
         :run_negative: run findclumps on the negative cube
         :verbose: increase verbosity
+
         '''
-        if ncores == 1:
-            for i in kernels:
-                if run_positive:
-                    self.findclumps_1kernel(output_file=output_file + '_clumpsP', negative=False, minwidth=i,
-                                            clean_tmp=clean_tmp, rms_region=rms_region,
-                                            sextractor_param_file=sextractor_param_file,
-                                            verbose=verbose)
-                if run_negative:
-                    self.findclumps_1kernel(output_file=output_file + '_clumpsN', negative=True, minwidth=i,
-                                            clean_tmp=clean_tmp, rms_region=rms_region,
-                                            sextractor_param_file=sextractor_param_file,
-                                            verbose=verbose)
+        if run_search:
+            if ncores == 1:
+                for i in kernels:
+                    if run_positive:
+                        self.findclumps_1kernel(output_file=output_file + '_clumpsP', negative=False, minwidth=i,
+                                                clean_tmp=clean_tmp, rms_region=rms_region,
+                                                sextractor_param_file=sextractor_param_file,
+                                                verbose=verbose)
+                    if run_negative:
+                        self.findclumps_1kernel(output_file=output_file + '_clumpsN', negative=True, minwidth=i,
+                                                clean_tmp=clean_tmp, rms_region=rms_region,
+                                                sextractor_param_file=sextractor_param_file,
+                                                verbose=verbose)
 
-        else:
-            if not run_positive or not run_negative:
-                raise RuntimeError(
-                    "Multithreading only implemented for combined positive and negative search.")  ##LAB probably the easiest for now
-            from multiprocessing.dummy import Pool as ThreadPool
-            from itertools import repeat
+            else:
+                if not run_positive or not run_negative:
+                    raise RuntimeError(
+                        "Multithreading only implemented for combined positive and negative search.")  ##LAB probably the easiest for now
+                from multiprocessing.dummy import Pool as ThreadPool
+                from itertools import repeat
 
-            kernels = np.atleast_1d(kernels)
-            kernels_width_neg_and_pos = np.concatenate((-kernels, kernels))
-            names = [output_file + '_clumpsN'] * len(kernels) + [output_file + '_clumpsP'] * len(kernels)
-            # arguments: (output_file, rms_region, minwidth, sextractor_param_file, clean_tmp, negative)
-            iterable = zip(names, repeat(rms_region), np.abs(kernels_width_neg_and_pos),
-                           repeat(sextractor_param_file), repeat(True), (np.sign(kernels_width_neg_and_pos) < 0))
+                kernels = np.atleast_1d(kernels)
+                kernels_width_neg_and_pos = np.concatenate((-kernels, kernels))
+                names = [output_file + '_clumpsN'] * len(kernels) + [output_file + '_clumpsP'] * len(kernels)
+                # arguments: (output_file, rms_region, minwidth, sextractor_param_file, clean_tmp, negative)
+                iterable = zip(names, repeat(rms_region), np.abs(kernels_width_neg_and_pos),
+                               repeat(sextractor_param_file), repeat(True), (np.sign(kernels_width_neg_and_pos) < 0))
 
-            with ThreadPool(ncores) as p:
-                p.starmap(self.findclumps_1kernel, iterable)
-                p.close()
-                p.join()
-            print('Multi-threaded Findclumps done, running line stats and cropping doubles...')
+                with ThreadPool(ncores) as p:
+                    p.starmap(self.findclumps_1kernel, iterable)
+                    p.close()
+                    p.join()
+            print('Findclumps done, running line stats and cropping doubles...')
 
-        if run_positive:
-            tools.run_line_stats_sex(sextractor_catalogue_name=output_file + '_clumpsP',
-                                     binning_array=kernels, SNR_min=min_SNR)
+        if run_crop:
+            # process positive catalog
+            if run_positive:
+                tools.run_line_stats_sex(sextractor_catalogue_name=output_file + '_clumpsP',
+                                         binning_array=kernels, SNR_min=min_SNR)
 
-            tools.crop_doubles(cat_name=output_file + "_clumpsP_minSNR_" + str(min_SNR) + ".cat",
-                               delta_offset_arcsec=delta_offset_arcsec,
-                               delta_freq=delta_freq,
-                               verbose=verbose)
+                tools.crop_doubles(cat_name=output_file + "_clumpsP_minSNR_" + str(min_SNR) + ".cat",
+                                   delta_offset_arcsec=delta_offset_arcsec,
+                                   delta_freq=delta_freq,
+                                   verbose=verbose)
 
-        if run_negative:
-            tools.run_line_stats_sex(sextractor_catalogue_name=output_file + '_clumpsN',
-                                     binning_array=kernels, SNR_min=min_SNR)
+            # process negative catalog
+            if run_negative:
+                tools.run_line_stats_sex(sextractor_catalogue_name=output_file + '_clumpsN',
+                                         binning_array=kernels, SNR_min=min_SNR)
 
-            tools.crop_doubles(cat_name=output_file + "_clumpsN_minSNR_" + str(min_SNR) + ".cat",
-                               delta_offset_arcsec=delta_offset_arcsec,
-                               delta_freq=delta_freq,
-                               verbose=verbose)
+                tools.crop_doubles(cat_name=output_file + "_clumpsN_minSNR_" + str(min_SNR) + ".cat",
+                                   delta_offset_arcsec=delta_offset_arcsec,
+                                   delta_freq=delta_freq,
+                                   verbose=verbose)
+
+        # analyse fidelity
+        if run_fidelity:
+            catP, catN, candP, candN \
+                = tools.fidelity_analysis(catN_name=output_file + "_clumpsN_minSNR_" + str(min_SNR) + "_cropped.cat",
+                                          catP_name=output_file + "_clumpsP_minSNR_" + str(min_SNR) + "_cropped.cat",
+                                          bins=bins,
+                                          min_SN_fit=min_SN_fit,
+                                          fidelity_threshold=fidelity_threshold,
+                                          kernels=kernels)
+
+            return catP, catN, candP, candN
+
 
 class MultiCube:
     """
