@@ -745,7 +745,6 @@ class Cube:
         :param output_file: relative/absolute path to the outpute catalogue
         :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord].
             If ``None``, takes the central 25% pixels (square)
-        :param sn_threshold: Minimum SN of peaks to retain
         :param minwidth: Number of channels to bin
         :param clean_tmp: Whether to remove or not the temporary files created by Sextractor
         :return:
@@ -843,10 +842,11 @@ class Cube:
                         clean_tmp=True, ncores=1,
                         run_search=True, run_positive=True, run_negative=True,
                         run_crop=True,
-                        min_SNR=0, delta_offset_arcsec=2, delta_freq=0.1,
-                        run_fidelity=True, bins=np.arange(0, 15, 0.2),
+                        SNR_min=3, delta_offset_arcsec=2, delta_freq=0.1,
+                        run_fidelity=True,
+                        fidelity_bins=np.arange(0, 15, 0.2),
                         min_SN_fit=4.0, fidelity_threshold=0.5,
-                        verbose=False):
+                        verbose=True):
         '''Run the full findclumps search and analysis for different kernel
         sizes, on the positive and/or negative cube(s):
 
@@ -860,17 +860,27 @@ class Cube:
         kernels and/or modifying the cropping criteria).
 
         :param output_file: relative/absolute path to the outpute catalogue
+        :param kernels: list of odd kernel widths to use
         :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord].
             If ``None``, takes the central 25% pixels (square)
-        :param sn_threshold: Minimum SN of peaks to retain
-        :param minwidth: Number of channels to bin / a.k.a boxcar kernel size
-        :min_SNR: min SNR for final catalogues
-        :delta_offset_arcsec: maximum offset to match detections in the cube [arcsec]
-        :delta_freq: maximum frequency offset to match detections in the cube [GHz]
-        :run_positive: run findclumps on the positive cube
-        :run_negative: run findclumps on the negative cube
-        :verbose: increase verbosity
+        :param sextractor_param_file: path to sextractor param file
+        :param clean_tmp: cleanup intermediate sextractor files (disable for debugging)
+        :param ncores: number of cores for multiprocessing (done over kernels and pos/neg search)
+        :param run_search: if `False` will skip the search step
+        :param run_positive: if `False` will skip the positive search
+        :param run_negative: if `False` will skip the negative search
 
+        :param run_crop: if `False` will skip the crop step
+        :param SNR_min: Minimum SN of peaks to retain in the crop
+        :param delta_offset_arcsec: maximum offset to match detections in the cube [arcsec]
+        :param delta_freq: maximum frequency offset to match detections in the cube [GHz]
+
+        :param run_fidelity: if `False` will skip the fidelity analysis
+        :param fidelity_bins: SN bins for the fidelity analysis
+        :param min_SN_fit: minimum SN for fidelity fit
+        :param fidelity_threshold: Fidelity threshold above which to select candidates
+
+        :param verbose: increase overall verbosity
         '''
         if run_search:
             if ncores == 1:
@@ -904,15 +914,19 @@ class Cube:
                     p.starmap(self.findclumps_1kernel, iterable)
                     p.close()
                     p.join()
-            print('Findclumps done, running line stats and cropping doubles...')
-
+            if verbose:
+                print('Findclumps done.')
+            
         if run_crop:
+            if verbose:
+                print('Running line stats and cropping doubles...')
+            
             # process positive catalog
             if run_positive:
                 tools.run_line_stats_sex(sextractor_catalogue_name=output_file + '_clumpsP',
-                                         binning_array=kernels, SNR_min=min_SNR)
+                                         binning_array=kernels, SNR_min=SNR_min)
 
-                tools.crop_doubles(cat_name=output_file + "_clumpsP_minSNR_" + str(min_SNR) + ".cat",
+                tools.crop_doubles(cat_name=output_file + "_clumpsP_minSNR_" + str(SNR_min) + ".cat",
                                    delta_offset_arcsec=delta_offset_arcsec,
                                    delta_freq=delta_freq,
                                    verbose=verbose)
@@ -920,9 +934,9 @@ class Cube:
             # process negative catalog
             if run_negative:
                 tools.run_line_stats_sex(sextractor_catalogue_name=output_file + '_clumpsN',
-                                         binning_array=kernels, SNR_min=min_SNR)
+                                         binning_array=kernels, SNR_min=SNR_min)
 
-                tools.crop_doubles(cat_name=output_file + "_clumpsN_minSNR_" + str(min_SNR) + ".cat",
+                tools.crop_doubles(cat_name=output_file + "_clumpsN_minSNR_" + str(SNR_min) + ".cat",
                                    delta_offset_arcsec=delta_offset_arcsec,
                                    delta_freq=delta_freq,
                                    verbose=verbose)
@@ -930,12 +944,12 @@ class Cube:
         # analyse fidelity
         if run_fidelity:
             catP, catN, candP, candN \
-                = tools.fidelity_analysis(catN_name=output_file + "_clumpsN_minSNR_" + str(min_SNR) + "_cropped.cat",
-                                          catP_name=output_file + "_clumpsP_minSNR_" + str(min_SNR) + "_cropped.cat",
-                                          bins=bins,
+                = tools.fidelity_analysis(catN_name=output_file + "_clumpsN_minSNR_" + str(SNR_min) + "_cropped.cat",
+                                          catP_name=output_file + "_clumpsP_minSNR_" + str(SNR_min) + "_cropped.cat",
+                                          bins=fidelity_bins,
                                           min_SN_fit=min_SN_fit,
                                           fidelity_threshold=fidelity_threshold,
-                                          kernels=kernels)
+                                          kernels=kernels, verbose=verbose)
 
             return catP, catN, candP, candN
 

@@ -549,7 +549,7 @@ def line_stats_sextractor(catalogue, binning, SNR_min=5):
 
 def run_line_stats_sex(sextractor_catalogue_name,
                        binning_array=np.arange(1, 20, 2),
-                       SNR_min=5):
+                       SNR_min=3):
     '''
     Merges, cleans and reformat clump catalogues (positive or negative) of different kernel widths. Also makes a DS9
     region file for all clumps above a chosen threshold. Made to operate over all kernel half-widths for convenience.
@@ -684,18 +684,18 @@ def fidelity_function(sn, sigma, c):
 
 
 def fidelity_selection(cat_negative, cat_positive, bin_edges=np.arange(0, 20, 0.1),
-                       i_SN=5, fidelity_threshold=0.6, min_SN_fit=None, verbose=True):
+                       i_SN=5, fidelity_threshold=0.6, min_SN_fit=4.0, verbose=True):
     '''
     Fidelity selection following Walter et al. 2016 (https://ui.adsabs.harvard.edu/abs/2016ApJ...833...67W/abstract) to
     select clumps which are more likely to be positive than negative. Plot the selection and threshold if required.
 
     :param cat_negative: Catalogue of negative clump detections
     :param cat_positive: Catalogue of positive clump detections
+    :param bin_edges: SN bins for the fidelity analysis
     :param i_SN: index of the SNR in the catalogues (if catalogues were produced by the internal interferopy findclumps function i_SN =5)
-    :param max_SN: estimated maximum SN of clumps found in the cube
     :param plot_name: if different than "" plot the fidelity function and threshold and save to given name
-    :fidelity_threshold: Fidelity threshold above which to select candidates
-    :return: Interpolated SN corresponding to the fidlity threshold chosen
+    :param min_SN_fit: minimum SN for fidelity fit
+    :param fidelity_threshold: Fidelity threshold above which to select candidates
     '''
     if verbose:
         if np.max(np.concatenate([cat_positive[:, int(i_SN)], cat_negative[:, int(i_SN)]])) > bin_edges[-1]:
@@ -735,7 +735,7 @@ def fidelity_selection(cat_negative, cat_positive, bin_edges=np.arange(0, 20, 0.
 
 def fidelity_plot(cat_negative, cat_positive, bin_edges=np.arange(0, 20, 0.1),
                   i_SN=5, fidelity_threshold=0.6, plot_name='', title_plot=None,
-                  min_SN_fit=None, verbose=True):
+                  min_SN_fit=4.0, verbose=True):
 
     bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, bins_fitted, hist_N_fitted \
         = fidelity_selection(cat_negative, cat_positive,
@@ -794,6 +794,20 @@ def fidelity_analysis(catN_name, catP_name,
                       fidelity_threshold=0.5,
                       kernels=np.arange(3, 20, 2),
                       verbose=True):
+    """Perform and plot the fidelity analysis on a positive and negative catalog
+
+    :param catN_name: name of the cropped catalog of negative lines
+    :param catN_name: name of the cropped catalog of positive lines
+    :param bins: SN bins for the fidelity analysis
+    :param min_SN_fit: minimum SN for fidelity fit
+    :param fidelity_threshold: Fidelity threshold above which to select candidates
+    :param kernels: list of odd kernel widths to use
+
+    :return: full list of positive candidates with fidelity
+    :return: full list of negative candidates with fidelity
+    :return: list of positive candidates with fidelity above `fidelity_threshold`
+    :return: list of negative candidates with fidelity above `fidelity_threshold`
+    """
     if verbose:
         print("Analysing fidelity.")
     # read in the input catalogs - these should already be cropped
