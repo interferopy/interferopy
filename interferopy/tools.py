@@ -153,6 +153,10 @@ def calcrms(arr, fitgauss=False, around_zero=True, clip_sigma=3, maxiter=20):
     a = arr[np.isfinite(arr)].flatten()
     rms = 0
 
+    if len(a) < 1:
+        # no finite pixels
+        rms = np.nan
+
     # TODO: likely a similar function already exists in some statistical library (look for Chauvenet)
 
     # iteratively calc rms and remove all values outside 3sigma
