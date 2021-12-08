@@ -205,10 +205,13 @@ class Cube:
             if type(self.beamvol) is Table.Column:
                 self.beamvol = self.beamvol.data
 
-    def write_fitsfile(self, filename, overwrite=False):
+    def write_fitsfile(self, filename: str, overwrite=False):
         """
         Write the current head and im to a new fitsfile (useful if modified).
         This is still experimental and may fail on certain headers.
+
+        :param filename: Path string to the output file.
+        :param overwrite: False by default.
         """
         # transpose the cube back
         hdu = fits.PrimaryHDU(data=self.im.T, header=self.head)
@@ -731,31 +734,6 @@ class Cube:
             return radius, profile
 
         return
-
-    def save_fitsfile(self, filename: str = None, overwrite=False):
-        """
-        Save the cube in a fits file by storing the image and the header.
-
-        :param filename: Path string to the output file. Uses input filename by default
-        :param overwrite: False by default.
-        :return:
-        """
-
-        if filename is None and self.filename is None:
-            raise ValueError("No filename was provided.")
-
-        if not overwrite and filename is None:
-            raise ValueError("Overwriting is disabled and no filename was provided.")
-
-        # use the input filename if none is provided
-        if overwrite and filename is None:
-            filename = self.filename
-
-        if os.path.exists(filename) and not overwrite:
-            raise RuntimeError("Filename exist, but overwriting is disabled.")
-
-        fits.writeto(filename, self.im.T, self.head, overwrite=overwrite)
-        self.log("Fits file saved to " + filename)
 
     def findclumps_1kernel(self, output_file, rms_region=1./4., minwidth=3,
                            sextractor_param_file='default.sex',
