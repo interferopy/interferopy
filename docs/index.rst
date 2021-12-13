@@ -26,7 +26,7 @@ To get started, checkout the :doc:`pages/install` page.
    pages/findclumps
    pages/api
 
-Please report any issues on the development page: https://github.com/mladenovak/interferopy
+Please report any issues on the development page: https://github.com/interferopy/interferopy
 
 Cheers!
 =======
