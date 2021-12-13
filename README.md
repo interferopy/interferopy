@@ -3,7 +3,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-interferopy%2Finterferopy-blue.svg?style=flat)](https://github.com/interferopy/interferopy)
 [![License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/interferopy/interferopy/blob/master/LICENSE)
 [![Documentation Status](https://readthedocs.org/projects/interferopy/badge/?version=latest)](https://interferopy.readthedocs.io/en/latest/?badge=latest)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5775604.svg)](https://doi.org/10.5281/zenodo.5775604)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5775603.svg)](https://doi.org/10.5281/zenodo.5775603)
 
 A Python library of common tasks used in the analysis of radio/(sub)mm interferometric data.
 
@@ -14,7 +14,7 @@ Read the documentation on [interferopy.readthedocs.io](https://interferopy.readt
 
 ## Acknowledgement
 
-If you make use of Intereropy in your work, please cite it as *Boogaard, Meyer & Novak (2021)*, using the following BibTeX entry:
+If you make use of Interferopy in your work, please cite it as *Boogaard, Meyer & Novak (2021)*, using the following BibTeX entry:
 
 ```
 @software{interferopy,
