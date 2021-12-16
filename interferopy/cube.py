@@ -749,7 +749,10 @@ class Cube:
         :param clean_tmp: Whether to remove or not the temporary files created by Sextractor
         :return:
         """
-        tmpdir = './tmp_findclumps/'
+        if negative:
+            tmpdir = './tmp_findclumps/kw' + str(minwidth) + '_N/'
+        else:
+            tmpdir = './tmp_findclumps/kw' + str(minwidth) + '_P/'
         if not os.path.exists(tmpdir):
             os.makedirs(tmpdir)
 
@@ -804,6 +807,9 @@ class Cube:
 
             # process output
             if sextractor_cat.shape == (0,):
+                if clean_tmp:
+                    os.remove(tmp_fits)
+                    os.remove(tmp_list)
                 continue
             elif len(sextractor_cat.shape) == 1:
                 sextractor_cat = sextractor_cat.reshape((-1, 6))
@@ -908,7 +914,8 @@ class Cube:
                 names = [output_file + '_clumpsN'] * len(kernels) + [output_file + '_clumpsP'] * len(kernels)
                 # arguments: (output_file, rms_region, minwidth, sextractor_param_file, clean_tmp, negative)
                 iterable = zip(names, repeat(rms_region), np.abs(kernels_width_neg_and_pos),
-                               repeat(sextractor_param_file), repeat(True), (np.sign(kernels_width_neg_and_pos) < 0))
+                               repeat(sextractor_param_file), repeat(clean_tmp), (np.sign(kernels_width_neg_and_pos) < 0),
+                               repeat(verbose))
 
                 with ThreadPool(ncores) as p:
                     p.starmap(self.findclumps_1kernel, iterable)
