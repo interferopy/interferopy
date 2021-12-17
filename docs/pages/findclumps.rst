@@ -38,7 +38,8 @@ Example usage:
                                                     run_fidelity=True,
                                                     fidelity_bins=np.arange(0, 15, 0.2),
                                                     min_SN_fit=4.0, fidelity_threshold=0.5,
-                                                    verbose=True)
+                                                    verbose=True,
+                                                    ncores=1)
 
 
 This will run the search for kernels of 3 up to 19 channels, crop the
