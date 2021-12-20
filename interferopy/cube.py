@@ -742,17 +742,19 @@ class Cube:
         FINDCLUMP(s) algorithm (Decarli+2014,Walter+2016). Takes the cube image and outputs the 3d (x,y,wavelength) position
         of clumps of a minimum SN specified. Works by using a top-hat filter on a rebinned version of the datacube.
 
-        :param output_file: relative/absolute path to the outpute catalogue
+        :param output_file: relative/absolute path to the output catalogue
         :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord].
             If ``None``, takes the central 25% pixels (square)
         :param minwidth: Number of channels to bin
         :param clean_tmp: Whether to remove or not the temporary files created by Sextractor
         :return:
         """
+        # keep tmpdir in the same folder as output file
+        basepath = os.path.split(output_file)[0]
         if negative:
-            tmpdir = './tmp_findclumps/kw' + str(minwidth) + '_N/'
+            tmpdir = os.path.join(basepath, 'tmp_findclumps_kw' + str(minwidth) + '_N/')
         else:
-            tmpdir = './tmp_findclumps/kw' + str(minwidth) + '_P/'
+            tmpdir = os.path.join(basepath, 'tmp_findclumps_kw' + str(minwidth) + '_P/')
         if not os.path.exists(tmpdir):
             os.makedirs(tmpdir)
 
@@ -865,7 +867,7 @@ class Cube:
         analysis after changing the parameters (e.g., adding different
         kernels and/or modifying the cropping criteria).
 
-        :param output_file: relative/absolute path to the outpute catalogue
+        :param output_file: relative/absolute path to the output catalogue
         :param kernels: list of odd kernel widths to use
         :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord].
             If ``None``, takes the central 25% pixels (square)
