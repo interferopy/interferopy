@@ -905,9 +905,6 @@ class Cube:
                                                 verbose=verbose)
 
             else:
-                # if not run_positive or not run_negative:
-                #     raise RuntimeError(
-                #         "Multithreading only implemented for combined positive and negative search.")  ##LAB probably the easiest for now
                 from multiprocessing.dummy import Pool as ThreadPool
                 from itertools import repeat
 
