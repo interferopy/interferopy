@@ -39,6 +39,7 @@ Example usage:
                                                     fidelity_bins=np.arange(0, 15, 0.2),
                                                     min_SN_fit=4.0, fidelity_threshold=0.5,
                                                     verbose=True,
+                                                    sextractor_param_file = '',
                                                     ncores=1)
 
 
@@ -50,6 +51,17 @@ negative catalogs and those only keeping sources above a fidelity
 threshold of 0.5 (per kernel width).  For more information, see the
 documentation of :any:`interferopy.cube.Cube.findclumps_full` and the
 individual functions for more details.
+
+#### Sextractor parameter files
+Default Sextractor files (.sex,.param)  are distributed with interferopy.
+The default.param cannot be changed because the code expects a fixed
+number ofcolumns with a certain order in the intermediate Sextractor
+catalogues. MINTHRES/MINAREA/DETECT_THRES parameters are set to 3, as we
+find this works well for most applications and observatories. If you wish
+to change these parameters, the filename of the .sex file in the
+'sextractor_param_file' parameter. We note that high SNR and area thresholds
+accelerate findclumps but make the fitting of the SNR distribution and the
+fidelity more unstable as the low-SNR distribution is not constrained.
 
 The resulting fidelity selection plot should look like this:
 
