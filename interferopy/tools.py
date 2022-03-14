@@ -849,9 +849,9 @@ def fidelity_analysis(catN_name, catP_name,
 
         catP['F_kw'][catP['BINNING'] == kernel] = fidelity_function(catP['SNR'][catP['BINNING'] == kernel], popt[0], popt[1])
 
-    # save output catalog sorted by Fidelity
-    catP.sort("F_kw", reverse=True)
-    catN.sort("F_kw", reverse=True)
+    # save output catalog sorted by SNR
+    catP.sort("SNR", reverse=True)
+    catN.sort("SNR", reverse=True)
 
     catP.add_column(np.arange(1, len(catP)+1), index=-1, name='ID')
     catN.add_column(np.arange(1, len(catN)+1), index=-1, name='ID')

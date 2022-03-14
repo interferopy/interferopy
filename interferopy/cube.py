@@ -916,14 +916,21 @@ class Cube:
                                                 verbose=verbose)
 
             else:
-                if not run_positive or not run_negative:
-                    raise RuntimeError(
-                        "Multithreading only implemented for combined positive and negative search.")  ##LAB probably the easiest for now
                 from multiprocessing.dummy import Pool as ThreadPool
                 from itertools import repeat
 
                 kernels = np.atleast_1d(kernels)
-                kernels_width_neg_and_pos = np.concatenate((-kernels, kernels))
+                if run_positive and run_negative:
+                    kernels_width_neg_and_pos = np.concatenate((-kernels, kernels))
+                else:
+                    if run_positive:
+                        kernels_width_neg_and_pos = kernels
+                    elif run_negative:
+                        kernels_width_neg_and_pos = -kernels
+                    else:
+                        # this should not happen
+                        raise RuntimeError("ERROR: run_search=True but run_positve=run_negative=False; "
+                                           "NotImplemented for Multiprocessing: set run_search=False")
                 names = [output_file + '_clumpsN'] * len(kernels) + [output_file + '_clumpsP'] * len(kernels)
                 # arguments: (output_file, rms_region, minwidth, sextractor_param_file, clean_tmp, negative)
                 iterable = zip(names, repeat(rms_region), np.abs(kernels_width_neg_and_pos),
