@@ -5,6 +5,7 @@ from astropy.io import fits
 from astropy.table import Table
 from astropy import wcs
 import scipy.constants as const
+import interferopy
 import interferopy.tools as tools
 
 
@@ -736,7 +737,7 @@ class Cube:
         return
 
     def findclumps_1kernel(self, output_file, rms_region=1./4., minwidth=3,
-                           sextractor_param_file='default.sex',
+                           sextractor_param_file='',
                            clean_tmp=True, negative=False, verbose=False):
         """
         FINDCLUMP(s) algorithm (Decarli+2014,Walter+2016). Takes the cube image and outputs the 3d (x,y,wavelength) position
@@ -746,6 +747,7 @@ class Cube:
         :param rms_region: Region to compute the rms noise [2x2 array in image pixel coord].
             If ``None``, takes the central 25% pixels (square)
         :param minwidth: Number of channels to bin
+        :param sextractor_param_file: if '', gets the default.sex file in interferopy
         :param clean_tmp: Whether to remove or not the temporary files created by Sextractor
         :return:
         """
@@ -768,9 +770,11 @@ class Cube:
             chnbox = int(minwidth / 2.0)
 
         if negative:
-            cube = -self.im.T  # sextractor expects the counter-intuitive freq,dec,ra order (because the header has not been changed)
+            # sextractor expects the counter-intuitive freq,dec,ra order (because the header has not been changed)
+            cube = -self.im.T
         else:
-            cube = self.im.T  # sextractor expects the counter-intuitive freq,dec,ra order (because the header has not been changed)
+            # sextractor expects the counter-intuitive freq,dec,ra order (because the header has not been changed)
+            cube = self.im.T
 
         nax1 = cube.shape[0]
         nax2 = cube.shape[1]
@@ -802,7 +806,14 @@ class Cube:
             hdul.writeto(tmp_fits, overwrite=True)
 
             # run Sextractor
-            os.system('sex ' + tmp_fits + ' -c ' + sextractor_param_file + ' -CATALOG_NAME ' + tmp_list + ' -VERBOSE_TYPE QUIET')
+            path_sextractor_files = os.path.dirname(interferopy.__file__ ) + '/data/'
+
+            if sextractor_param_file=='':
+                sextractor_param_file = path_sextractor_files + 'default.sex'
+
+            os.system('sex ' + tmp_fits + ' -c ' + sextractor_param_file
+                      + ' -PARAMETERS_NAME '+ path_sextractor_files + 'default.param'
+                      + ' -CATALOG_NAME ' + tmp_list + ' -VERBOSE_TYPE QUIET')
 
             # read output
             sextractor_cat = np.genfromtxt(tmp_list, skip_header=6)
@@ -846,7 +857,7 @@ class Cube:
 
     def findclumps_full(self, output_file,
                         kernels=np.arange(3, 20, 2), rms_region=1./4.,
-                        sextractor_param_file='default.sex',
+                        sextractor_param_file='',
                         clean_tmp=True, ncores=1,
                         run_search=True, run_positive=True, run_negative=True,
                         run_crop=True,

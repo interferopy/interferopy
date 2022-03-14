@@ -52,11 +52,15 @@ Extract aperture flux density with the :any:`Cube.spectrum` method, for example
 
 .. code-block:: python
 
-    flux, err, _ = cub.spectrum(ra=ra, dec=dec, radius=1.5, calc_error=True) # r=1.5" aperture
-    flux, err, _ = cub.spectrum(ra=ra, dec=dec, radius=0, calc_error=True) # single pixel spectrum extraction
-    flux, err, _ = cub.spectrum(radius=1.5 calc_error=True) # center of the cube, r=1.5" aperture
+    flux, err, n_pix, peak_sb = cub.spectrum(ra=ra, dec=dec, radius=1.5, calc_error=True) # r=1.5" aperture
+    flux, err, _, _ = cub.spectrum(ra=ra, dec=dec, radius=0, calc_error=True) # single pixel spectrum extraction
+    flux, err, _, _ = cub.spectrum(radius=1.5 calc_error=True) # center of the cube, r=1.5" aperture
 
 Omitting the coordinates assumes the central pixel position, which is useful for a quick look at the data, especially in targeted observations, where the source is usually in the phase center. Setting the radius to zero yields a single pixel spectrum.
+
+On top of the aperture-integrated flux and error,  :any:`Cube.spectrum` also returns the number of pixels in the aperture as well as the peak value in the aperture (which is especially useful to a peak SNR value in 2D maps).
+
+When the :any:`Cube` loads a 2D image, :any:`Cube.spectrum` returns simply a single flux / error value.
 
 Additional convenience wrapper functions exist (derived from the :any:`Cube.spectrum` method).
 
