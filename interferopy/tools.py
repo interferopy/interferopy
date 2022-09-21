@@ -565,7 +565,7 @@ def run_line_stats_sex(sextractor_catalogue_name,
         clumps_reg.write('# Region file format: DS9 version 4.1 \n '
                          'global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 '
                          'dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 \n')
-        clumps_reg.write('fk5 \n')
+        clumps_reg.write('icrs \n')
 
         clumps_name_out = sextractor_catalogue_name+'_minSNR_'+str(SNR_min)+'.cat'
 
@@ -672,7 +672,7 @@ def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1, verbose=False)
     catalogue_cropped_best_region.write('# Region file format: DS9 version 4.1 \n '
                                         'global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 '
                                         'dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 \n')
-    catalogue_cropped_best_region.write('fk5 \n')
+    catalogue_cropped_best_region.write('icrs \n')
     for x in catalogue_cropped_best:
         catalogue_cropped_best_region.write('circle(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
                                             + ',0.5") \n  # text(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
