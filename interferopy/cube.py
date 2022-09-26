@@ -69,6 +69,10 @@ class Cube:
 
             self.__rms: np.ndarray = None
             """Array of rms values per channel. Computed on demand."""
+
+            self.__radesys: str = None
+            """Reference frame.  Read from header (with appropriate warnings) only when needed."""
+
             self.__load_fitsfile()
         else:
             raise FileNotFoundError(filename)
@@ -285,6 +289,26 @@ class Cube:
 
     rms = property(get_rms, set_rms)
     """Rms (root mean square) per channel."""
+
+    def get_radesys(self):
+        """Read celestial reference frame from header.  If not found,
+        it will assume ICRS and raise a warning.
+
+        N.B. This is rarely used.  Findclumps needs it to create ds9
+        region files."""
+        try:
+            self.__radesys = self.head['RADESYS'].lower()
+        except KeyError:
+            self.log("Warning: RADEYS keyword not found in header; assuming ICRS when needed.")
+            self.__radesys = "icrs"
+
+        return self.__radesys
+
+    def set_radesys(self, value):
+        self.__radesys = value
+
+    radesys = property(get_radesys, set_radesys)
+
 
     def deltavel(self, reffreq: float = None):
         """
@@ -943,30 +967,30 @@ class Cube:
                     p.join()
             if verbose:
                 print('Findclumps done.')
-            
+
         if run_crop:
             if verbose:
                 print('Running line stats and cropping doubles...')
-            
+
             # process positive catalog
             if run_positive:
                 tools.run_line_stats_sex(sextractor_catalogue_name=output_file + '_clumpsP',
-                                         binning_array=kernels, SNR_min=SNR_min)
+                                         binning_array=kernels, SNR_min=SNR_min, frame=self.radesys)
 
                 tools.crop_doubles(cat_name=output_file + "_clumpsP_minSNR_" + str(SNR_min) + ".cat",
                                    delta_offset_arcsec=delta_offset_arcsec,
                                    delta_freq=delta_freq,
-                                   verbose=verbose)
+                                   verbose=verbose, frame=self.radesys)
 
             # process negative catalog
             if run_negative:
                 tools.run_line_stats_sex(sextractor_catalogue_name=output_file + '_clumpsN',
-                                         binning_array=kernels, SNR_min=SNR_min)
+                                         binning_array=kernels, SNR_min=SNR_min, frame=self.radesys)
 
                 tools.crop_doubles(cat_name=output_file + "_clumpsN_minSNR_" + str(SNR_min) + ".cat",
                                    delta_offset_arcsec=delta_offset_arcsec,
                                    delta_freq=delta_freq,
-                                   verbose=verbose)
+                                   verbose=verbose, frame=self.radesys)
 
         # analyse fidelity
         if run_fidelity:

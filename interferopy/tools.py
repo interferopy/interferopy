@@ -549,7 +549,7 @@ def line_stats_sextractor(catalogue, binning, SNR_min=5):
 
 def run_line_stats_sex(sextractor_catalogue_name,
                        binning_array=np.arange(1, 20, 2),
-                       SNR_min=3):
+                       SNR_min=3, frame='icrs'):
     '''
     Merges, cleans and reformat clump catalogues (positive or negative) of different kernel widths. Also makes a DS9
     region file for all clumps above a chosen threshold. Made to operate over all kernel half-widths for convenience.
@@ -565,7 +565,7 @@ def run_line_stats_sex(sextractor_catalogue_name,
         clumps_reg.write('# Region file format: DS9 version 4.1 \n '
                          'global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 '
                          'dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 \n')
-        clumps_reg.write('icrs \n')
+        clumps_reg.write('{} \n'.format(frame))
 
         clumps_name_out = sextractor_catalogue_name+'_minSNR_'+str(SNR_min)+'.cat'
 
@@ -592,7 +592,7 @@ def run_line_stats_sex(sextractor_catalogue_name,
                                header="RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING")
 
 
-def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1, verbose=False):
+def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1, verbose=False, frame='icrs'):
     '''
     Takes a catalogue of clumps and group sources likely from the same target. Tolerance in sky posoition and frequency
     to be given. If the data is not continuum-subtracted, continuum sources will result in multiple groups of clumps
@@ -672,7 +672,7 @@ def crop_doubles(cat_name, delta_offset_arcsec=2, delta_freq=0.1, verbose=False)
     catalogue_cropped_best_region.write('# Region file format: DS9 version 4.1 \n '
                                         'global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 '
                                         'dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 \n')
-    catalogue_cropped_best_region.write('icrs \n')
+    catalogue_cropped_best_region.write('{frame} \n')
     for x in catalogue_cropped_best:
         catalogue_cropped_best_region.write('circle(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
                                             + ',0.5") \n  # text(' + '{:9.5f}'.format(x[0]) + ',' + '{:9.5f}'.format(x[1])
