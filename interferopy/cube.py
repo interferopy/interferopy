@@ -796,6 +796,11 @@ class Cube:
 
             # collapsing cube over chosen channel number, saving rms in center
             im_channel_sum = np.nansum(cube[k - chnbox:k + chnbox + 1, :, :], axis=0)
+            # sum of only nans is 0.0
+            if np.alltrue(im_channel_sum == 0.0):
+                if verbose:
+                    self.log("Slice {} is all nan or zero -- skipping.".format(k))
+                    continue
             rms = np.nanstd(
                 im_channel_sum[int(nax2 / 2) - int(nax2 * rms_region) - 1:int(nax2 / 2) + int(nax2 * rms_region),
                 int(nax3 / 2) - int(nax3 * rms_region) - 1:int(nax3 / 2) + int(nax3 * rms_region)])
