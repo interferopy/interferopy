@@ -308,7 +308,7 @@ class Cube:
         self.__radesys = value
 
     radesys = property(get_radesys, set_radesys)
-
+    """Reference frame."""
 
     def deltavel(self, reffreq: float = None):
         """
