@@ -980,6 +980,23 @@ class Cube:
 
             return catP, catN, candP, candN
 
+    def make_snr_cube(self, store: bool = False, filename: str = None, overwrite: bool=False):
+        """Convert cube into a signal-to-noise cube (i.e., divide by rms), in-place.
+
+        :param store: save resulting cube under `filename` (default: `False`)
+        :param filename: `filename` (default:`None` appends `_snr` to `self.filename`
+        :param overwrite: overwrite file if it exists
+
+        """
+        self.im /= self.rms
+
+        if store:
+            if filename is None:
+                f, e = os.path.splitext(self.filename)
+                filename = f + '_snr' + e
+
+            self.write_fitsfile(filename, overwrite=overwrite)
+
 
 class MultiCube:
     """
