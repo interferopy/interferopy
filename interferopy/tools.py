@@ -867,3 +867,34 @@ def fidelity_analysis(catN_name, catP_name,
     candN = catN[np.where(catN['F_kw'] > fidelity_threshold)[0]]
 
     return catP, catN, candP, candN
+
+
+def plot_growing_aperture_corrected(mc, tab):
+    fig, ax = plt.subplots(figsize=(5,4))
+    ax.set_title("Curves of growth")
+    ax.set_xlabel("Radius [arcsec]")
+    ax.set_ylabel(mc.cubes['image'].head['BUNIT'])
+
+    radius = tab['radius']
+    flux = tab['flux']
+    err = tab['err']
+
+    ax.plot(radius, flux, color="firebrick", lw=2, label="Corrected")
+    ax.fill_between(radius, (flux - err), (flux + err), color="firebrick", lw=0, alpha=0.2)
+
+    ax.plot(radius, tab["flux_dirty"], label="Dirty", color="black", ls=":")
+    ax.plot(radius, tab["flux_clean"], label="Cleaned components only", ls="-.", color="navy")
+    ax.plot(radius, tab["flux_residual"], label="Residual", ls="--", color="orange")
+    ax.plot(radius, tab["flux_image"], label="Uncorrected: clean + residual", dashes=[10, 3],
+            color="forestgreen")
+    ax.axhline(0, color="gray", lw=0.5, ls=":")
+
+    ax2 = ax.twinx()
+    ax2.plot(radius, tab["epsilon"], color="gray", label="Clean-to-dirty beam ratio")
+    ax2.set_ylabel("Clean-to-dirty beam ratio")
+
+    lines, labels = ax.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax2.legend(lines + lines2, labels + labels2, bbox_to_anchor=(1.2, 0.8))
+
+    return fig, ax

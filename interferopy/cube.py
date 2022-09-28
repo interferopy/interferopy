@@ -1389,7 +1389,7 @@ class MultiCube:
     def growing_aperture_corrected(self, ra: float = None, dec: float = None, freq: float = None,
                                    maxradius=1.0, binspacing: float = None, bins: list = None,
                                    px: int = None, py: int = None, channel: int = 0,
-                                   calc_error=True, apply_pb_corr=True):
+                                   calc_error=True, apply_pb_corr=True, plot=False):
         """
         Extract the curve of growth from the map using the residual scaling to account for the dirty beam.
         Correction for the primary beam response is applied if avaliable.
@@ -1467,5 +1467,8 @@ class MultiCube:
                     names=["radius", "flux", "err",
                            "flux_image", "flux_dirty", "flux_residual", "flux_clean",
                            "epsilon", "npix", "nbeam", "pb"])
+
+        if plot:
+            tools.plot_growing_aperture_corrected(self, tab)
 
         return radius, flux, err, tab
