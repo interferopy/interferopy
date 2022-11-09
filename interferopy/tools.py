@@ -743,8 +743,8 @@ def fidelity_plot(cat_negative, cat_positive, bin_edges=np.arange(0, 20, 0.1),
                              i_SN, fidelity_threshold, min_SN_fit,
                              verbose=verbose)
 
-    fig = plt.figure(figsize=(5, 5))
-    ax1 = fig.add_subplot(211)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(5,5), sharex=True)
+
     # plot fidelity
     ax1.plot(bins_fitted, fidelity, drawstyle='steps-mid', c='C7')
     ax1.fill_between(bins_fitted, fidelity, step="mid", alpha=0.4, color='C7')
@@ -755,15 +755,13 @@ def fidelity_plot(cat_negative, cat_positive, bin_edges=np.arange(0, 20, 0.1),
     ax1.set_xlim(bins[0], bins[-1])
     ax1.set_ylim(-0.05, 1.05)
     ymin, ymax = ax1.get_ylim()
-    plt.vlines(x=sn_thres, ymin=ymin, ymax=ymax, linestyles='--',
+    ax1.vlines(x=sn_thres, ymin=ymin, ymax=ymax, linestyles='--',
                label=f'F(S/N={sn_thres:.2f})={fidelity_threshold}', color='k')
-    plt.xticks([])
-    plt.ylabel('Fidelity')
-    plt.legend()
+    ax1.set_ylabel('Fidelity')
+    ax1.legend()
     if title_plot is not None:
-        plt.title(title_plot)
+        ax1.set_title(title_plot)
 
-    ax2 = fig.add_subplot(212)
     # plot positive & negative hist
     ax2.plot(bins, hist_P, drawstyle='steps-mid')
     ax2.plot(bins, hist_N, drawstyle='steps-mid')
@@ -775,12 +773,12 @@ def fidelity_plot(cat_negative, cat_positive, bin_edges=np.arange(0, 20, 0.1),
     # always show 1
     ax2.set_ylim(0.1, None)
     ymin, ymax = ax2.get_ylim()
-    plt.vlines(x=sn_thres, ymin=ymin, ymax=ymax, linestyles='--', color='k')
-    plt.ylabel(r'$\log N$')
-    plt.xlabel('S/N')
-    plt.legend()
+    ax2.vlines(x=sn_thres, ymin=ymin, ymax=ymax, linestyles='--', color='k')
+    ax2.set_ylabel(r'$\log N$')
+    ax2.set_xlabel('S/N')
+    ax2.legend()
 
-    plt.subplots_adjust(wspace=None, hspace=None)
+    fig.subplots_adjust(wspace=None, hspace=0.1)
 
     if plot_name != '':
         plt.savefig(plot_name + '.pdf', bbox_inches="tight", dpi=300)
