@@ -56,4 +56,4 @@ Enjoy one pisco coctail, surrounded by dust, bubbling with CO, and with a twist 
 
 Licence
 =======
-MIT License, Copyright (c) 2021 Leindert Boogaard, Romain Meyer, Mladen Novak
+MIT License, Copyright (c) 2024 Leindert Boogaard, Romain Meyer, Mladen Novak
