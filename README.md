@@ -30,6 +30,6 @@ year = {2021}
 
 ## Licence
 
-Copyright (c) 2021 Leindert Boogaard, Romain Meyer, Mladen Novak
+Copyright (c) 2024 Leindert Boogaard, Romain Meyer, Mladen Novak
 
 MIT License.  See the LICENSE file for details.
