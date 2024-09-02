@@ -323,7 +323,7 @@ class Cube:
 
         return self.deltafreq / reffreq * const.c / 1000  # in km/s
 
-    def vels(self, reffreq: float):
+    def vels(self, reffreq: float = None):
         """
         Compute velocities of all cube channels for a given reference frequency.
 

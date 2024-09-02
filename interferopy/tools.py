@@ -867,6 +867,21 @@ def fidelity_analysis(catN_name, catP_name,
     return catP, catN, candP, candN
 
 
+def plot_growing_aperture(cube, radius, flux, err, npix):
+    fig, ax = plt.subplots(figsize=(5,4))
+    ax.set_title("Curves of growth")
+    ax.set_xlabel("Radius [arcsec]")
+    ax.set_ylabel(cube.head['BUNIT'])
+
+    ax.plot(radius, flux, color="firebrick", lw=2, label="flux")
+    ax.fill_between(radius, (flux - err), (flux + err), color="firebrick", lw=0, alpha=0.2)
+
+    ax.axhline(0, color="gray", lw=0.5, ls=":")
+
+    ax.legend()
+    return fig, ax
+
+
 def plot_growing_aperture_corrected(mc, tab):
     fig, ax = plt.subplots(figsize=(5,4))
     ax.set_title("Curves of growth")
