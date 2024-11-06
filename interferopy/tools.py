@@ -855,11 +855,18 @@ def fidelity_analysis(catN_name, catP_name,
     catP.add_column(np.arange(1, len(catP)+1), index=-1, name='ID')
     catN.add_column(np.arange(1, len(catN)+1), index=-1, name='ID')
 
-    np.savetxt(catP_name.rstrip('.cat')+'_wfidelity_sorted.cat',
-               catP,
-               fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f',
-                    '%9.6f', '%2.0f', '%2.0i', '%5.3f', '%5.3f', '%2.0i'],
-               header='RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING GROUP F F_kw ID')
+    try:
+        # try sextractor format
+        np.savetxt(catP_name.rstrip('.cat')+'_wfidelity_sorted.cat',
+                   catP,
+                   fmt=['%9.5f', '%9.5f', '%8.4f', '%5.1f', '%5.1f', '%6.2f',
+                        '%9.6f', '%2.0f', '%2.0i', '%5.3f', '%5.3f', '%2.0i'],
+                   header='RA DEC FREQ_GHZ X Y SNR FLUX_MAX BINNING GROUP F F_kw ID')
+    except:
+        # otherwise (over)write general ascii file
+        catP.write(os.path.splitext(catP_name)[0] + '_wfidelity_sorted.cat',
+                   format='ascii', overwrite=True)
+
 
     # return candidates above fidelity threshold
     candP = catP[np.where(catP['F_kw'] > fidelity_threshold)[0]]
