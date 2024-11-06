@@ -814,7 +814,7 @@ def fidelity_analysis(catN_name, catP_name,
     catP = Table.read(catP_name, format='ascii')
 
     # first analyse fidelity for all kernels
-    bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, _, _\
+    bins_k, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, _, _\
         = fidelity_plot(np.array([catN['SNR']]).T,
                         np.array([catP['SNR']]).T,
                         i_SN=0,
@@ -836,7 +836,7 @@ def fidelity_analysis(catN_name, catP_name,
         catP_kernel = catP[catP['BINNING'] == kernel]
         catN_kernel = catN[catN['BINNING'] == kernel]
 
-        bins, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, _, _ \
+        bins_k, hist_N, hist_P, fidelity, popt, pcorr, sn_thres, _, _ \
             = fidelity_plot(np.array([catN_kernel['SNR']]).T,
                             np.array([catP_kernel['SNR']]).T,
                             i_SN=0,
