@@ -692,7 +692,8 @@ def fidelity_selection(cat_negative, cat_positive, bin_edges=np.arange(0, 20, 0.
     :param cat_negative: Catalogue of negative clump detections
     :param cat_positive: Catalogue of positive clump detections
     :param bin_edges: SN bins for the fidelity analysis
-    :param i_SN: index of the SNR in the catalogues (if catalogues were produced by the internal interferopy findclumps function i_SN =5)
+    :param i_SN: column index of the SNR column in the negative/positive catalogues
+           (if catalogues were produced by the internal interferopy findclumps function i_SN =5)
     :param plot_name: if different than "" plot the fidelity function and threshold and save to given name
     :param min_SN_fit: minimum SN for fidelity fit
     :param fidelity_threshold: Fidelity threshold above which to select candidates
