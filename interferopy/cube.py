@@ -28,10 +28,11 @@ class Cube:
         radius, flux, err, _ = c.growing_aperture(ra=ra, dec=dec, freq=freq, maxradius=5, calc_error=True)
     """
 
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, verbose=True):
         """
         :param filename: Path string to the fits image.
         """
+        self.verbose = verbose
         if os.path.exists(filename):
             self.filename = filename
             self.hdu = None
@@ -229,7 +230,8 @@ class Cube:
         All class functions print info through this wrapper.
         Could be extended to provide different levels of info, timestamps, or logging to a file.
         """
-        print(text)
+        if self.verbose:
+            print(text)
 
     def im_mask_values(self, value_to_mask=None, mask_value=np.nan):
         """Mask specific `values_to_mask` in the image to `mask_value`.
