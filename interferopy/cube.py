@@ -1059,7 +1059,7 @@ class MultiCube:
         # tab.write("growth.txt", format="ascii.fixed_width", overwrite=True)  # Save results for later
     """
 
-    def __init__(self, filename: str = None, autoload_multi=True):
+    def __init__(self, filename: str = None, autoload_multi=True, verbose=False):
         """
         Provide the file path to the final cleaned cube. Will try to find other adjacent cubes based on their names.
         Standard key names from CASA are: image, residual, model, psf, pb, image.pbcor
@@ -1068,6 +1068,7 @@ class MultiCube:
         :param filename: Path string to the cleaned cube fits image.
         :param autoload_multi: If true, attempt to find other cubes using preset (mostly CASA) suffixes.
         """
+        self.verbose = verbose
 
         # these are standard suffixes from CASA tclean output (except "dirty")
         # gildas output has different naming conventions, which are not implemented here
@@ -1175,7 +1176,8 @@ class MultiCube:
         All class functions print info through this wrapper.
         Could be extended to provide different levels of info, timestamps, or logging to a file.
         """
-        print(text)
+        if self.verbose:
+            print(text)
 
     def make_clean_comp(self, overwrite=False):
         """
