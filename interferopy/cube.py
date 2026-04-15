@@ -170,7 +170,7 @@ class Cube:
                     self.log("Warning: unknown 3rd axis units.")
             # if frequencies are given in radio velocity, convert to freqs
             else:
-                print(str(self.head["CTYPE3"]))
+                self.log(str(self.head["CTYPE3"]))
                 freqs = None
                 self.log("Warning: unknown 3rd axis format.")
             self.freqs = freqs
@@ -255,7 +255,7 @@ class Cube:
         if out != mask_value:
             self.im[self.im == out] = mask_value
         else:
-            print ("Warning: You are masking to the same value.")
+            self.log("Warning: You are masking to the same value.")
 
     def im_mask_channels(self, channels_to_mask, mask_value=np.nan):
         """Mask specific `channels_to_mask` to `mask_value`.
@@ -973,11 +973,11 @@ class Cube:
                     p.close()
                     p.join()
             if verbose:
-                print('Findclumps done.')
+                self.log('Findclumps done.')
 
         if run_crop:
             if verbose:
-                print('Running line stats and cropping doubles...')
+                self.log('Running line stats and cropping doubles...')
 
             # process positive catalog
             if run_positive:
@@ -1059,7 +1059,7 @@ class MultiCube:
         # tab.write("growth.txt", format="ascii.fixed_width", overwrite=True)  # Save results for later
     """
 
-    def __init__(self, filename: str = None, autoload_multi=True, verbose=False):
+    def __init__(self, filename: str = None, autoload_multi=True, verbose=True):
         """
         Provide the file path to the final cleaned cube. Will try to find other adjacent cubes based on their names.
         Standard key names from CASA are: image, residual, model, psf, pb, image.pbcor
@@ -1110,7 +1110,7 @@ class MultiCube:
         # load the cubes
         for k in self.cubes.keys():
             if filenames[k] is not None:
-                self.cubes[k] = Cube(filenames[k])
+                self.cubes[k] = Cube(filenames[k], verbose=self.verbose)
 
         self.log("Loaded cubes: " + str(self.loaded_cubes))
 
@@ -1133,7 +1133,7 @@ class MultiCube:
                 key = suffix
 
         # Load and store new cube
-        cub = Cube(filename)
+        cub = Cube(filename, verbose=self.verbose)
 
         if key is None:
             raise ValueError("Please provide key under which to store the cube.")
@@ -1196,7 +1196,7 @@ class MultiCube:
         if self["clean.comp"] is not None and not overwrite:
             self.log("Warning: clean.comp cube already exists and overwriting is disabled.")
 
-        cub = Cube(self["image"].filename)
+        cub = Cube(self["image"].filename, verbose=self.verbose)
         cub.im = self["image"].im - self["residual"].im
         cub.filename = None  # This cube is no longer the one on disk, so empty the filename as a precaution
         self["clean.comp"] = cub
@@ -1221,7 +1221,7 @@ class MultiCube:
         if self["image"] is not None and not overwrite:
             self.log("Warning: image cube already exists and overwriting is disabled.")
 
-        cub = Cube(self["image.pbcor"].filename)
+        cub = Cube(self["image.pbcor"].filename, verbose=self.verbose)
         cub.im = self["image.pbcor"].im * self["pb"].im
         cub.filename = None  # This cube is no longer the one on disk, so empty the filename as a precaution
         self["image"] = cub
